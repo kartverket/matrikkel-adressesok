@@ -1,0 +1,17 @@
+{
+  "name": "matrikkel-adressesok",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^9.4.2",
+    "@hono/prometheus": "^1.0.3",
+    "@hono/swagger-ui": "^0.6.1",
+    "hono": "^4.12.27",
+    "proj4": "^2.20.9",
+    "prom-client": "^15.1.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
