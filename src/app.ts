@@ -1,5 +1,5 @@
 import {Hono} from 'hono';
-import { logger } from 'hono/logger'
+import {logger as requestLogger} from 'hono/logger'
 import {swaggerUI} from '@hono/swagger-ui'
 import {prometheus} from "@hono/prometheus";
 import openapiSpec from './openapi.json';
@@ -8,6 +8,7 @@ import {sokHandlerFactory} from "./routes/sok";
 import {punktsokHandlerFactory} from "./routes/punktsok";
 import {config} from "./config";
 import {Client} from "@elastic/elasticsearch";
+import {logger} from "./utils/logger";
 
 const baseUrl = '/adresser/v1'
 export const app = new Hono().basePath(baseUrl);
@@ -28,7 +29,7 @@ export const esClient = new Client({
 });
 
 app.use('*', registerMetrics);
-app.use(logger());
+app.use(requestLogger(logger.info));
 
 // OpenAPI
 app.get('/docs.json', (c) => c.json(openapiSpec));
@@ -43,6 +44,6 @@ app.get('/internal/metrics', printMetrics);
 
 // Endpoints
 app.get('/sok', sokHandlerFactory({esClient, index: config.elasticsearch.index}))
-app.get('/punktsok', punktsokHandlerFactory({ esClient, index: config.elasticsearch.index }))
+app.get('/punktsok', punktsokHandlerFactory({esClient, index: config.elasticsearch.index}))
 
 export default app;
