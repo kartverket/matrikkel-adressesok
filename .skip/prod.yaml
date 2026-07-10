@@ -1,0 +1,96 @@
+apiVersion: skiperator.kartverket.no/v1alpha1
+kind: Application
+metadata:
+  name: matrikkel-adressesok
+  namespace: matrikkel-main
+spec:
+  image: "{{image}}"
+  port: 3000
+
+  # No ingress here, since we have to handle it manually
+
+  replicas:
+    min: 3
+    max: 6
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1G
+    requests:
+      cpu: 100m
+      memory: 256M
+
+  liveness:
+    failureThreshold: 3
+    initialDelay: 0
+    path: /adresser/v1/internal/isAlive
+    period: 10
+    port: 3000
+    successThreshold: 1
+    timeout: 1
+  readiness:
+    failureThreshold: 3
+    initialDelay: 0
+    path: /adresser/v1/internal/isReady
+    period: 10
+    port: 3000
+    successThreshold: 1
+    timeout: 1
+  prometheus:
+    allowAllMetrics: false
+    path: /adresser/v1/internal/metrics
+    port: 3000
+    scrapeInterval: 60s
+
+  databases:
+    - name: matrikkel-adressesok
+      envName: ELS_ADRESSER_HOSTS
+
+  env:
+    - name: NO_COLOR
+      value: "true"
+---
+# SKIP Støtter ikke path-routing på tvers av namespaces
+# Derfor må vi manuelt koble oss mot en gateway for å trafikk inn til appen våres.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: api-ingresses
+spec:
+  gateways:
+    - istio-gateways/api-kartverket-ingress # ref: https://github.com/kartverket/skip-apps/blob/main/env/atkv3-prod/istio-gateways/resources/gateways/common-ingress-gateway.yaml
+  hosts:
+    - api.kartverket.no
+  http:
+    - name: "matrikkel-adressesok"
+      match:
+        - port: 443
+          uri:
+            prefix: "/adresser/v1"
+      route:
+        - destination:
+            host: "matrikkel-adressesok"
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "matrikkel-adressesok-allow-tcp"
+spec:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              'kubernetes.io/metadata.name': 'istio-gateways'
+          podSelector:
+            matchLabels:
+              istio: ingressgateway
+      ports:
+        - port: 3000
+          protocol: TCP
+  podSelector:
+    matchLabels:
+      app: "matrikkel-adressesok"
+  policyTypes:
+    - Ingress

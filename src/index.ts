@@ -1,11 +1,11 @@
 import { serve } from 'bun';
 import { app } from './app';
 import {logger} from "./utils/logger";
+import {config} from "./config";
 
-const port = 9090;
 serve({
     fetch: app.fetch,
-    port
+    port: config.port
 });
 
-logger.info(`Adresse API listening on http://localhost:${port}`);
+logger.info(`Adresse API listening on http://localhost:${config.port}`);

@@ -1,0 +1,98 @@
+name: Build, push and deploy to ArgoCD
+on:
+  push:
+    branches: ["main"]
+
+env:
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: kartverket/matrikkel-adressesok
+
+concurrency:
+  group: build-push-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      actions: read
+      id-token: write
+
+    outputs:
+      image: ${{ steps.set_output.outputs.image }}
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #6.0.3
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee #4.2.0
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b #6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build docker image and push
+        id: build
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf #7.2.0
+        with:
+          context: .
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }} , ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          push: true
+
+      - name: Summarize Image Digest and Set Output
+        id: set_output
+        run: |
+          echo "Full Image URL: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }}@${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "image=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
+
+  deploy-dev:
+    name: Deploy to dev
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Deploy to prodtest
+        uses: kartverket/matrikkel-actions/heimdall-deploy@main
+        with:
+          cluster: 'atkv3-prod'
+          resource: '.skip/prodtest.yaml'
+          var: |
+            image=${{ needs.build.outputs.image }}
+
+  deploy-prod:
+    name: Deploy to prod
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    needs:
+      - build
+      - deploy-dev
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Deploy to prod
+        uses: kartverket/matrikkel-actions/heimdall-deploy@main
+        with:
+          cluster: 'atkv3-prod'
+          resource: '.skip/prod.yaml'
+          var: |
+            image=${{ needs.build.outputs.image }}
+        
+            
