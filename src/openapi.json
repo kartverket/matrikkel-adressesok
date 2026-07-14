@@ -11,10 +11,6 @@
     "application/json"
   ],
   "basePath": "/adresser/v1",
-  "schemes": [
-    "http",
-    "https"
-  ],
   "paths": {
     "/sok": {
       "get": {
@@ -321,21 +317,30 @@
     "HitMetadata": {
       "type": "object",
       "properties": {
-        "side": {
+        "sokeStreng": {
+          "type": "string",
+          "description": "S\u00f8kestrengen som ble sendt inn til API-et."
+        },
+        "totaltAntallTreff": {
           "type": "integer",
           "format": "int32",
-          "default": 0,
-          "description": "Sidenummeret som vises. F\u00f8rste side = 0"
+          "description": "Antall treff som s\u00f8ket returnerte."
+        },
+        "viserFra": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Hvilket resultatnummer det f\u00f8rste objektet du ser har."
         },
         "asciiKompatibel": {
           "type": "boolean",
           "default": true,
           "description": "Garanterer at dataene som returneres er ascii-kompatible."
         },
-        "viserFra": {
+        "side": {
           "type": "integer",
           "format": "int32",
-          "description": "Hvilket resultatnummer det f\u00f8rste objektet du ser har."
+          "default": 0,
+          "description": "Sidenummeret som vises. F\u00f8rste side = 0"
         },
         "treffPerSide": {
           "type": "integer",
@@ -344,19 +349,10 @@
           "description": "Antall treff per side.",
           "maximum": 1000
         },
-        "totaltAntallTreff": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Antall treff som s\u00f8ket returnerte."
-        },
         "viserTil": {
           "type": "integer",
           "format": "int32",
           "description": "Hvilket resultatnummer det siste objektet du ser har."
-        },
-        "sokeStreng": {
-          "type": "string",
-          "description": "S\u00f8kestrengen som ble sendt inn til API-et."
         }
       }
     },
