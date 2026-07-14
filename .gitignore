@@ -1,2 +1,7 @@
 node_modules/
-.idea/
+coverage/
+.env
+.env.local
+!.env.example
+.idea
+

@@ -1,11 +1,16 @@
-import { serve } from 'bun';
-import { app } from './app';
-import {logger} from "./utils/logger";
+import { createApp } from "./app";
+import { loadConfig } from "./config";
+import { ElasticsearchClient } from "./elasticsearch";
+import { createLogger } from "./logger";
 
-const port = 9090;
-serve({
-    fetch: app.fetch,
-    port
-});
+const config = loadConfig();
+const logger = createLogger(config);
+const elasticsearch = new ElasticsearchClient(config, logger);
+const app = createApp({ elasticsearch, logger });
 
-logger.info(`Adresse API listening on http://localhost:${port}`);
+logger.info({ port: config.port }, "Starting address API");
+
+export default {
+  port: config.port,
+  fetch: app.fetch,
+};
