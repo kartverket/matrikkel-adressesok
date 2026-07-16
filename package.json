@@ -1,5 +1,5 @@
 {
-  "name": "matrikkel-rest-api-adresse",
+  "name": "matrikkel-adressesok",
   "version": "1.2.0",
   "private": true,
   "type": "module",
@@ -19,23 +19,23 @@
   "dependencies": {
     "@elastic/elasticsearch": "7",
     "@hono/prometheus": "^1.0.3",
-    "@hono/swagger-ui": "^0.5.2",
-    "@hono/zod-validator": "^0.7.6",
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-validator": "^0.8.0",
     "epsg-index": "^2.0.0",
-    "hono": "^4.0.0",
+    "hono": "^4.12.30",
     "pino": "^10.3.1",
     "proj4": "^2.20.9",
     "prom-client": "^15.1.3",
-    "zod": "^4.0.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.3",
     "@types/bun": "latest",
     "lefthook": "^2.1.10",
-    "typescript": "^5.0.0"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "bun": ">=1.3.0"
   },
-  "packageManager": "bun@1.3.12"
+  "packageManager": "bun@1.3.14"
 }
