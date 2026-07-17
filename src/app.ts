@@ -33,9 +33,14 @@ export function createApp({ elasticsearch, logger }: AppDependencies): Hono {
 
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));
-  app.get("", swaggerUI({ url: `${BASE_PATH}/openapi.json` }));
-  app.get("/", swaggerUI({ url: `${BASE_PATH}/openapi.json` }));
-  app.get("/index.html", swaggerUI({ url: `${BASE_PATH}/openapi.json` }));
+
+  const swagger = swaggerUI({
+    url: `${BASE_PATH}/openapi.json`,
+    title: "Adresser API - Swagger UI",
+  });
+  app.get("", swagger);
+  app.get("/", swagger);
+  app.get("/index.html", swagger);
 
   app.get("/internal/isAlive", (c) => c.json({ status: "UP" }));
   app.get("/internal/isReady", async (c) => {
