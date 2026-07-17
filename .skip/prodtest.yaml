@@ -44,7 +44,7 @@ spec:
 
   databases:
     - name: matrikkel-adressesok
-      envName: ELS_ADRESSER_HOSTS
+      envName: ELS_ADRESSER_URL
 
   env:
     - name: NO_COLOR
