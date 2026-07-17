@@ -9,9 +9,8 @@ spec:
 
   # No ingress here, since we have to handle it manually
 
-  replicas:
-    min: 3
-    max: 6
+  replicas: 2
+
   resources:
     limits:
       cpu: 1000m
