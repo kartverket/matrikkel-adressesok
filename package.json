@@ -17,7 +17,7 @@
     "compose:down": "docker compose down --volumes"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "7",
+    "@elastic/elasticsearch": "9",
     "@hono/prometheus": "^1.0.3",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-validator": "^0.8.0",
