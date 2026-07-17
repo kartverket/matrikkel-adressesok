@@ -70,6 +70,7 @@ jobs:
         with:
           cluster: 'atkv3-prod'
           resource: '.skip/prodtest.yaml'
+          wait: 'false' # just while we wait for a gcp-service account
           var: |
             image=${{ needs.build.outputs.image }}
 
