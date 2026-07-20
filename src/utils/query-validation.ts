@@ -1,4 +1,4 @@
-import { zValidator } from "@hono/zod-validator";
+import { validator } from "hono/validator";
 import { z } from "zod";
 import { jsonResponse } from "../http";
 import { DEFAULT_SRID } from "../projection";
@@ -83,9 +83,21 @@ function recordValidationIssue(errors: Record<string, string[]>, issue: z.core.$
   addValidationMessage(errors, field, issue.message);
 }
 
+function retainOnlyFirstOccurenceOfParams(
+  value: Record<string, string | string[]>,
+): Record<string, string> {
+  const values = Object.entries(value).map(([key, queryValue]) => [
+    key,
+    Array.isArray(queryValue) ? queryValue[0]! : queryValue,
+  ]);
+  return Object.fromEntries(values);
+}
+
 export const validateQuery = <T extends z.ZodType>(schema: T) =>
-  zValidator("query", schema, (result, _context) => {
-    if (result.success) return;
+  validator("query", async (value, _context) => {
+    const query = retainOnlyFirstOccurenceOfParams(value);
+    const result = await schema.safeParseAsync(query);
+    if (result.success) return result.data;
 
     return jsonResponse({ message: formatValidationErrors(result.error) }, 400, true);
   });
