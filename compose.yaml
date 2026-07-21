@@ -14,20 +14,5 @@ services:
       retries: 30
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
-
-  integration-tests:
-    profiles: ["test"]
-    build:
-      context: .
-      target: test
-    environment:
-      ELS_ADRESSER_URL: http://elasticsearch:9200
-      ELS_ADRESSER_INDEX: adressesok-test
-      ADRESSER_API_LOG_LEVEL: ERROR
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    command: ["bun", "test", "test/integration"]
-
 volumes:
   elasticsearch-data:

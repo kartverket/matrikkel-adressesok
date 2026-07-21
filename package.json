@@ -12,7 +12,6 @@
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test test/unit",
     "test:integration": "bun test test/integration",
-    "test:compose": "docker compose --profile test run --build --rm integration-tests",
     "compose:up": "docker compose up -d --wait elasticsearch",
     "compose:down": "docker compose down --volumes"
   },

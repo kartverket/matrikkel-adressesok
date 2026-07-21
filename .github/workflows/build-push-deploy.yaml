@@ -33,7 +33,16 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #7.0.0
       - uses: oven-sh/setup-bun@v2
-      - run: bun run test:compose # Runs "bun check" during build
+      - run: bun ci
+      - run: bun run check
+      - run: bun run compose:up
+      - run: bun run test:integration
+        env:
+          ELS_ADRESSER_URL: http://localhost:9200
+          ELS_ADRESSER_INDEX: adressesok-test
+          ADRESSER_API_LOG_LEVEL: ERROR
+      - run: bun run compose:down
+        if: always()
 
   build:
     runs-on: ubuntu-latest
