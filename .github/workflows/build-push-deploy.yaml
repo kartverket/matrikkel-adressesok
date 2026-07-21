@@ -35,7 +35,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun ci
       - run: bun check
-      - run: bun run test:integration
+      - run: bun run test:compose
 
   build:
     runs-on: ubuntu-latest
