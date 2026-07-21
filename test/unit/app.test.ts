@@ -143,7 +143,7 @@ describe("HTTP application", () => {
     });
   });
 
-  test.only("acceps duplicated scaler query parameters, and uses first occurence", async () => {
+  test("acceps duplicated scaler query parameters, and uses first occurence", async () => {
     let searchCalls = 0;
     let capturedQuery: unknown;
 
