@@ -4,61 +4,106 @@ on:
     branches: ["main"]
 
 env:
-  DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: kartverket/matrikkel-adressesok
+  CI: true
+  TZ: Europe/Oslo
+  SLACK_CHANNEL: C04SQEX2858
 
 concurrency:
   group: build-push-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version-string.outputs.version }}
+      image: ${{ steps.version-string.outputs.image }}
+
+    steps:
+      - name: Generate version string
+        id: version-string
+        shell: bash
+        run: |
+          version="$(date -u '+%Y.%m.%d-%H.%M')-$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/kartverket/matrikkel-adressesok/matrikkel-adressesok:${version}" >> "$GITHUB_OUTPUT"
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #7.0.0
+      - uses: oven-sh/setup-bun@v2
+      - run: bun ci
+      - run: bun check
+      - run: bun run test:integration
+
   build:
     runs-on: ubuntu-latest
+    needs:
+      - version
+      - test
     permissions:
       contents: write
       packages: write
-      actions: read
-      id-token: write
-
-    outputs:
-      image: ${{ steps.set_output.outputs.image }}
 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #7.0.0
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Login to Github Container Registry
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 #4.4.0
+        if: github.ref == 'refs/heads/main'
         with:
-          registry: ${{ env.DOCKER_REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b #6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image and push
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a #7.3.0
         with:
           context: .
-          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }} , ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          push: true
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ needs.version.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Summarize Image Digest and Set Output
-        id: set_output
-        run: |
-          echo "Full Image URL: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }}@${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-          echo "image=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag_version.outputs.new_tag }}" >> $GITHUB_OUTPUT
+      - name: Bump version and push tag
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b #6.2
+        with:
+          custom_tag: ${{ needs.version.outputs.version }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  pharos:
+    name: Run Pharos
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - version
+      - build
+    permissions:
+      actions: read
+      packages: read
+      contents: read
+      security-events: write
+    steps:
+      - name: "Run Pharos"
+        uses: kartverket/pharos@e5a5cf71dd41384d6d62c7d9b387851c0457e81b # v0.6.4
+        with:
+          image_url: ${{ needs.version.outputs.image }}
+          trivy: true
+          tfsec: true
+          disable_severity_check: true
 
   deploy-dev:
     name: Deploy to dev
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     needs:
+      - version
       - build
     permissions:
       actions: read
@@ -72,28 +117,68 @@ jobs:
           resource: '.skip/prodtest.yaml'
           wait: 'false' # just while we wait for a gcp-service account
           var: |
-            image=${{ needs.build.outputs.image }}
+            image=${{ needs.version.outputs.image }}
 
-  deploy-prod:
-    name: Deploy to prod
+  deploy-prod-notifier:
+    name: Slack Notify; Deploy to Production
     runs-on: ubuntu-latest
-    if: false #github.ref == 'refs/heads/main'
-    environment:
-      name: production
+    if: github.ref == 'refs/heads/main'
     needs:
+      - version
+      - pharos
       - build
       - deploy-dev
+    outputs:
+      messageId: ${{ steps.slack_notify.outputs.messageId }}
     permissions:
       actions: read
       contents: read
       id-token: write
     steps:
+      - name: Notify slack (Setup)
+        id: slack_notify
+        uses: kartverket/matrikkel-actions/slack-approval-notifier/setup-octo@main
+        with:
+          identity: 'matrikkel-adressesok'
+          channel: ${{ env.SLACK_CHANNEL }}
+          environment: 'produksjon'
+          appDescriptor: atkv3-prod:matrikkel-main:matrikkel-adressesok:${{ needs.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+  deploy-prod:
+    name: Deploy to prod
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - version
+      - deploy-prod-notifier
+    environment:
+      name: production
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Notify slack (Update)
+        uses: kartverket/matrikkel-actions/slack-approval-notifier/update-octo@main
+        with:
+          identity: 'matrikkel-adressesok'
+          channel: ${{ env.SLACK_CHANNEL }}
+          environment: 'produksjon'
+          appDescriptor: atkv3-prod:matrikkel-main:matrikkel-adressesok:${{ needs.version.outputs.version }}
+          messageId: ${{ needs.deploy-prod-notifier.outputs.messageId }}
+          status: ${{ job.status }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       - name: Deploy to prod
         uses: kartverket/matrikkel-actions/heimdall-deploy@main
         with:
           cluster: 'atkv3-prod'
           resource: '.skip/prod.yaml'
           var: |
-            image=${{ needs.build.outputs.image }}
+            image=${{ needs.version.outputs.image }}
         
             
