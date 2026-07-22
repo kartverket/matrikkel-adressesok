@@ -1,9 +1,11 @@
 import type { Hono } from "hono";
 import type { Logger } from "pino";
+import type { Registry } from "prom-client";
 import { z } from "zod";
 import type { Elasticsearch, ElasticsearchQuery } from "../elasticsearch";
 import { badRequest, jsonResponse } from "../http";
 import { reprojectAddresses } from "../projection";
+import { createHistogram, measureTime } from "../utils/metrics";
 import {
   booleanQuery,
   enforcePaginationLimit,
@@ -169,17 +171,29 @@ export function constructGeneralQuery(parameters: GeneralSearchParameters): Elas
   return combineQueries(queries);
 }
 
-export function registerSearchRoute(app: Hono, elasticsearch: Elasticsearch, logger: Logger): void {
+export function registerSearchRoute(
+  app: Hono,
+  elasticsearch: Elasticsearch,
+  logger: Logger,
+  prometheus: Registry,
+): void {
+  const timeHistogram = createHistogram({
+    name: "sok_query_duration_seconds",
+    help: "Time used to execute sok queries",
+    registers: [prometheus],
+  });
   app.get("/sok", validateQuery(GeneralSearchSchema), async (context) => {
     const parameters = context.req.valid("query");
     const query = constructGeneralQuery(parameters);
     logger.debug({ query }, "Elasticsearch query");
-    const result = await elasticsearch.search({
-      query,
-      from: parameters.side * parameters.treffPerSide,
-      size: parameters.treffPerSide,
-      _source: { excludes: ["objid"] },
-    });
+    const result = await measureTime(timeHistogram, () =>
+      elasticsearch.search({
+        query,
+        from: parameters.side * parameters.treffPerSide,
+        size: parameters.treffPerSide,
+        _source: { excludes: ["objid"] },
+      }),
+    );
 
     const addresses = reprojectAddresses(
       result.hits.map((hit) => hit._source),
