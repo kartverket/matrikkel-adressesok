@@ -8,9 +8,9 @@ const logger = createLogger(config);
 const elasticsearch = new ElasticsearchClient(config, logger);
 const app = createApp({ elasticsearch, logger });
 
-logger.info({ port: config.port }, "Starting address API");
+logger.info({ port: config.port }, `Starting address API at ${config.port}`);
 
-export default {
+Bun.serve({
   port: config.port,
   fetch: app.fetch,
-};
+});

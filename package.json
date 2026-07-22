@@ -18,6 +18,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "7",
     "@hono/prometheus": "^1.0.3",
+    "@hono/structured-logger": "^0.1.0",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-validator": "^0.9.0",
     "epsg-index": "^2.0.0",

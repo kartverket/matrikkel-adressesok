@@ -1,10 +1,10 @@
 import { prometheus } from "@hono/prometheus";
 import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
-import { logger as requestLogger } from "hono/logger";
 import type { Logger } from "pino";
 import type { Elasticsearch } from "./elasticsearch";
 import { HttpError, jsonResponse } from "./http";
+import { createStructuredHonoLogger } from "./logger";
 import openapiSpec from "./openapi.json" with { type: "json" };
 import { registerPointSearchRoute } from "./routes/point-search";
 import { registerSearchRoute } from "./routes/search";
@@ -23,10 +23,7 @@ export function createApp({ elasticsearch, logger }: AppDependencies): Hono {
   });
 
   app.use("*", registerMetrics);
-  app.use(
-    "*",
-    requestLogger((message) => logger.info(message)),
-  );
+  app.use(createStructuredHonoLogger(logger, `${BASE_PATH}/internal/`));
 
   registerSearchRoute(app, elasticsearch, logger);
   registerPointSearchRoute(app, elasticsearch, logger);
@@ -53,10 +50,8 @@ export function createApp({ elasticsearch, logger }: AppDependencies): Hono {
 
   app.onError((error) => {
     if (error instanceof HttpError) {
-      logger.warn({ err: error, status: error.status }, "Request rejected");
       return jsonResponse(error.payload, error.status, true);
     }
-    logger.error({ err: error }, "Unhandled request error");
     return jsonResponse({ message: "Internal Server Error" }, 500, true);
   });
 
