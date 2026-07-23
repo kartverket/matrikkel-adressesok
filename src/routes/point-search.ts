@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
 import type { Logger } from "pino";
+import type { Registry } from "prom-client";
 import { z } from "zod";
 import type {
   AddressDocument,
@@ -9,6 +10,7 @@ import type {
 } from "../elasticsearch";
 import { jsonResponse } from "../http";
 import { DEFAULT_SRID, reprojectAddresses, reprojectInputToDefault } from "../projection";
+import { createHistogram, measureTime } from "../utils/metrics";
 import {
   enforcePaginationLimit,
   integerQuery,
@@ -85,7 +87,13 @@ export function registerPointSearchRoute(
   app: Hono,
   elasticsearch: Elasticsearch,
   logger: Logger,
+  prometheus: Registry,
 ): void {
+  const timeHistogram = createHistogram({
+    name: "punktsok_query_duration_seconds",
+    help: "Time used to execute punktsok queries",
+    registers: [prometheus],
+  });
   app.get("/punktsok", validateQuery(GeoPointSchema), async (context) => {
     const parameters = context.req.valid("query");
     const point = reprojectInputToDefault(parameters.lat, parameters.lon, parameters.koordsys);
@@ -97,7 +105,7 @@ export function registerPointSearchRoute(
       parameters.treffPerSide,
     );
     logger.debug({ query: body.query }, "Elasticsearch geo query");
-    const result = await elasticsearch.search(body);
+    const result = await measureTime(timeHistogram, () => elasticsearch.search(body));
     const addresses = result.hits.map(addressWithDistance);
     const output: AddressListOutput = {
       metadata: metadata(

@@ -2,6 +2,7 @@ import { prometheus } from "@hono/prometheus";
 import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
 import type { Logger } from "pino";
+import type { Registry } from "prom-client";
 import type { Elasticsearch } from "./elasticsearch";
 import { HttpError, jsonResponse } from "./http";
 import { createStructuredHonoLogger } from "./logger";
@@ -12,21 +13,23 @@ import { registerSearchRoute } from "./routes/search";
 export interface AppDependencies {
   elasticsearch: Elasticsearch;
   logger: Logger;
+  registry: Registry;
 }
 
 const BASE_PATH = "/adresser/v1";
 
-export function createApp({ elasticsearch, logger }: AppDependencies): Hono {
+export function createApp({ elasticsearch, logger, registry }: AppDependencies): Hono {
   const app = new Hono().basePath(BASE_PATH);
   const { printMetrics, registerMetrics } = prometheus({
     collectDefaultMetrics: true,
+    registry,
   });
 
   app.use("*", registerMetrics);
   app.use(createStructuredHonoLogger(logger, `${BASE_PATH}/internal/`));
 
-  registerSearchRoute(app, elasticsearch, logger);
-  registerPointSearchRoute(app, elasticsearch, logger);
+  registerSearchRoute(app, elasticsearch, logger, registry);
+  registerPointSearchRoute(app, elasticsearch, logger, registry);
 
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));
