@@ -88,7 +88,7 @@ function retainOnlyFirstOccurenceOfParams(
 ): Record<string, string> {
   const values = Object.entries(value).map(([key, queryValue]) => [
     key,
-    Array.isArray(queryValue) ? queryValue[0]! : queryValue,
+    Array.isArray(queryValue) ? queryValue[0] : queryValue,
   ]);
   return Object.fromEntries(values);
 }

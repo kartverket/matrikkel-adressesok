@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import pino from "pino";
-import { createApp } from "../../src/app";
 import type { AppConfig } from "../../src/config";
 import { ElasticsearchClient } from "../../src/elasticsearch";
+import { appWith } from "../unit/test.utils";
 
 const elasticsearchUrl = Bun.env.ELS_ADRESSER_URL ?? "http://localhost:9200";
 const index = Bun.env.ELS_ADRESSER_INDEX ?? "adressesok-test";
@@ -93,7 +93,7 @@ describe("Elasticsearch 7 integration", () => {
 
   test("executes the legacy exact address query", async () => {
     const gateway = new ElasticsearchClient(config, logger);
-    const app = createApp({ elasticsearch: gateway, logger });
+    const app = appWith(gateway);
     const response = await app.request("/adresser/v1/sok?adressetekst=Kartverksveien%202");
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -108,7 +108,7 @@ describe("Elasticsearch 7 integration", () => {
 
   test("executes geo-distance filtering and sorting", async () => {
     const gateway = new ElasticsearchClient(config, logger);
-    const app = createApp({ elasticsearch: gateway, logger });
+    const app = appWith(gateway);
     const response = await app.request(
       "/adresser/v1/punktsok?lat=59.917&lon=10.7277&radius=10&treffPerSide=1",
     );
