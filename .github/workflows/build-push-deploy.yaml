@@ -1,7 +1,6 @@
 name: Build, push and deploy to ArgoCD
 on:
   push:
-    branches: ["main"]
 
 env:
   CI: true
