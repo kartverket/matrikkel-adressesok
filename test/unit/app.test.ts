@@ -1,13 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import pino from "pino";
-import { createApp } from "../../src/app";
-import type { Elasticsearch } from "../../src/elasticsearch";
-
-const logger = pino({ enabled: false });
-
-function appWith(elasticsearch: Elasticsearch) {
-  return createApp({ elasticsearch, logger });
-}
+import { appWith } from "./test.utils";
 
 describe("HTTP application", () => {
   test("serves the search response in the legacy shape", async () => {

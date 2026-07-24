@@ -1,14 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import pino from "pino";
-import { createApp } from "../../src/app";
 import openapiSpec from "../../src/openapi.json" with { type: "json" };
+import { appWith } from "./test.utils";
 
-const app = createApp({
-  logger: pino({ enabled: false }),
-  elasticsearch: {
-    isReady: async () => true,
-    search: async () => ({ total: 0, hits: [] }),
-  },
+const app = appWith({
+  isReady: async () => true,
+  search: async () => ({ total: 0, hits: [] }),
 });
 
 describe("API documentation", () => {

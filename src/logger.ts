@@ -18,7 +18,7 @@ const startTimeKey = "startTime";
 export function createStructuredHonoLogger(logger: Logger, internalPath: string) {
   return structuredLogger({
     createLogger: () => logger,
-    onRequest: (logger, c) => {
+    onRequest: (_logger, c) => {
       // Manually done since `onError` does not calculate elapsedMs automatically
       c.set(startTimeKey, performance.now());
     },
