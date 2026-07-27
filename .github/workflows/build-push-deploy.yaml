@@ -77,11 +77,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Bump version and push tag
-        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b #6.2
-        with:
-          custom_tag: ${{ needs.version.outputs.version }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag commit med artifaktversjon
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git tag ${{ needs.version.outputs.version }}
+          git push origin ${{ needs.version.outputs.version }}
 
   pharos:
     name: Run Pharos
