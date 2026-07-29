@@ -29,6 +29,7 @@ export function createStructuredHonoLogger(logger: Logger, internalPath: string)
       logger.info({
         status: c.res.status,
         path: c.req.path,
+        query: c.req.queries(),
         method: c.req.method,
         message: `${c.req.method} ${c.req.path} ${c.res.status} ${durationMs}ms`,
         duration_ms: durationMs,
