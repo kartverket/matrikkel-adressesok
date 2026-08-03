@@ -17,7 +17,7 @@ spec:
       memory: 1G
     requests:
       cpu: 100m
-      memory: 256M
+      memory: 512M # Istio-proxy bruker 200Mb
 
   liveness:
     failureThreshold: 3
