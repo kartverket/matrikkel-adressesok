@@ -22,7 +22,7 @@
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-validator": "^0.9.0",
     "epsg-index": "^2.0.0",
-    "hono": "^4.13.0",
+    "hono": "^4.13.1",
     "pino": "^10.3.1",
     "proj4": "^2.21.0",
     "prom-client": "^15.1.3",
