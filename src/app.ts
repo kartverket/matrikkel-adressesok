@@ -1,6 +1,7 @@
 import { prometheus } from "@hono/prometheus";
 import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { Logger } from "pino";
 import type { Registry } from "prom-client";
 import type { Elasticsearch } from "./elasticsearch";
@@ -27,6 +28,13 @@ export function createApp({ elasticsearch, logger, registry }: AppDependencies):
 
   app.use("*", registerMetrics);
   app.use(createStructuredHonoLogger(logger, `${BASE_PATH}/internal/`));
+  app.use(
+    "*",
+    cors({
+      origin: "*",
+      allowMethods: ["GET", "OPTIONS"],
+    }),
+  );
 
   registerSearchRoute(app, elasticsearch, logger, registry);
   registerPointSearchRoute(app, elasticsearch, logger, registry);
