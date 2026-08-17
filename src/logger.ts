@@ -28,9 +28,9 @@ export function createStructuredHonoLogger(logger: Logger, internalPath: string)
       const durationMs = Math.round(elapsedMs * 100) / 100;
       logger.info({
         status: c.res.status,
+        method: c.req.method,
         path: c.req.path,
         query: c.req.queries(),
-        method: c.req.method,
         message: `${c.req.method} ${c.req.path} ${c.res.status} ${durationMs}ms`,
         duration_ms: durationMs,
       });
@@ -42,10 +42,13 @@ export function createStructuredHonoLogger(logger: Logger, internalPath: string)
       const durationMs = now - (startTime ?? now);
       const duration = Math.round(durationMs * 100) / 100;
       logger.error({
-        message: `${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`,
-        err: { message: err.message, stack: err.stack },
         status: c.res.status,
+        method: c.req.method,
+        path: c.req.path,
+        query: c.req.queries(),
+        message: `${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`,
         duration_ms: duration,
+        err: { message: err.message, stack: err.stack },
       });
     },
   });
