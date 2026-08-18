@@ -14,8 +14,6 @@ export function createLogger(config: Pick<AppConfig, "logLevel">): Logger {
   });
 }
 
-const startTimeKey = "startTime";
-
 function logLevelForStatus(status: number): "info" | "warn" | "error" {
   if (status >= 500) return "error";
   if (status >= 400) return "warn";
