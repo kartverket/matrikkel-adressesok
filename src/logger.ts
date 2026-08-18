@@ -14,6 +14,14 @@ export function createLogger(config: Pick<AppConfig, "logLevel">): Logger {
   });
 }
 
+const startTimeKey = "startTime";
+
+function logLevelForStatus(status: number): "info" | "warn" | "error" {
+  if (status >= 500) return "error";
+  if (status >= 400) return "warn";
+  return "info";
+}
+
 export function createStructuredHonoLogger(logger: Logger, internalPath: string) {
   return structuredLogger({
     createLogger: () => logger,
@@ -21,8 +29,9 @@ export function createStructuredHonoLogger(logger: Logger, internalPath: string)
       if (c.req.path.startsWith(internalPath)) return;
 
       const durationMs = Math.round(elapsedMs * 100) / 100;
-      logger.info({
-        status: c.res.status,
+      const status = c.res.status;
+      logger[logLevelForStatus(status)]({
+        status,
         method: c.req.method,
         path: c.req.path,
         query: c.req.queries(),
@@ -32,8 +41,9 @@ export function createStructuredHonoLogger(logger: Logger, internalPath: string)
     },
     onError: (logger, err, c, elapsedMs) => {
       const durationMs = Math.round(elapsedMs * 100) / 100;
-      logger.error({
-        status: c.res.status,
+      const status = c.res.status;
+      logger[logLevelForStatus(status)]({
+        status,
         method: c.req.method,
         path: c.req.path,
         query: c.req.queries(),
