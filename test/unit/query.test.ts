@@ -16,11 +16,10 @@ describe("Elasticsearch 7 query compatibility", () => {
       bool: {
         must: [
           {
-            query_string: {
-              query: "munkegata AND 1 AND trondheim",
+            simple_query_string: {
+              query: "munkegata 1 trondheim",
               default_operator: "AND",
               fuzzy_max_expansions: 100,
-              type: "cross_fields",
             },
           },
           { match_phrase: { adressetekst: "Munkegata 1" } },
@@ -37,6 +36,28 @@ describe("Elasticsearch 7 query compatibility", () => {
     });
   });
 
+  test("strips a colon so it can't be read as a ES field selector", () => {
+    const parsed = parameters("sok=Haugesund%3A+Rennes%C3%B8ygate+16+5537");
+    expect(constructGeneralQuery(parsed)).toEqual({
+      simple_query_string: {
+        query: "Haugesund Rennesøygate 16 5537",
+        default_operator: "AND",
+        fuzzy_max_expansions: 100,
+      },
+    });
+  });
+
+  test("strips bang so it can't be read as a dangling NOT operator", () => {
+    const parsed = parameters("sok=frogner+95554385!!+2016");
+    expect(constructGeneralQuery(parsed)).toEqual({
+      simple_query_string: {
+        query: "frogner 95554385 2016",
+        default_operator: "AND",
+        fuzzy_max_expansions: 100,
+      },
+    });
+  });
+
   test("rejects wildcard combined with fuzzy search", () => {
     const parsed = parameters("sok=osloveie*&fuzzy=1");
     expect(() => constructGeneralQuery(parsed)).toThrow(HttpError);
@@ -46,7 +67,7 @@ describe("Elasticsearch 7 query compatibility", () => {
     expect(geoPointSearchBody(60, 11, 1000, 0, 10)).toMatchObject({
       query: {
         bool: {
-          must: [{ query_string: { query: "*" } }],
+          must: [{ simple_query_string: { query: "*" } }],
           filter: [
             {
               geo_distance: {

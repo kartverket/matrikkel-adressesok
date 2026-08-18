@@ -79,7 +79,12 @@ const elasticsearchFieldAliases: Partial<Record<AddressParameterName, string>> =
 };
 
 function replaceIllegalCharacters(value: string): string {
-  return value.replace(/[\\/]/g, " ").replace(/"/g, "").replace(/~/g, "").trim();
+  return value
+    .replace(/[\\/:!(){}[\]^?+]/g, " ")
+    .replace(/&&|\|\|/g, " ")
+    .replace(/"/g, "")
+    .replace(/~/g, "")
+    .trim();
 }
 
 function queryForField(key: string, rawValue: string | number): ElasticsearchQuery {
@@ -130,17 +135,14 @@ function createGeneralSearchQuery(
   if (parameters.fuzzy && fuzzyWildcard) {
     badRequest("Wildcard kan ikke brukes med fuzzysøk.");
   }
-  const generalSearch = searchTerms
-    .map((term) => applyFuzziness(term, parameters.fuzzy))
-    .join(` ${operator} `);
+  const generalSearch = searchTerms.map((term) => applyFuzziness(term, parameters.fuzzy)).join(" ");
   if (!generalSearch) return;
 
   return {
-    query_string: {
+    simple_query_string: {
       query: generalSearch,
       default_operator: operator,
       fuzzy_max_expansions: 100,
-      type: "cross_fields",
     },
   };
 }

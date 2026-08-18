@@ -153,11 +153,10 @@ describe("HTTP application", () => {
 
     expect(response.status).toBe(200);
     expect(capturedQuery).toEqual({
-      query_string: {
+      simple_query_string: {
         query: "Lakkegata~",
         default_operator: "AND",
         fuzzy_max_expansions: 100,
-        type: "cross_fields",
       },
     });
     expect(searchCalls).toBe(1);
