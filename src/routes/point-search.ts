@@ -46,7 +46,7 @@ export function geoPointSearchBody(
   return {
     query: {
       bool: {
-        must: [{ query_string: { query: "*" } }],
+        must: [{ simple_query_string: { query: "*" } }],
         filter: [
           {
             geo_distance: {

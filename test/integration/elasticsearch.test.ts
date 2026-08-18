@@ -12,7 +12,7 @@ const config: AppConfig = {
     url: elasticsearchUrl,
     username: undefined,
     password: undefined,
-    index: "adressesok-test",
+    index: index,
     requestTimeout: 20_000,
   },
   port: 3000,
