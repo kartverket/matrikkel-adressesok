@@ -46,7 +46,13 @@ const addressParameters = {
 
 export const GeneralSearchSchema = z
   .strictObject({
-    sok: z.string().optional(),
+    sok: z
+      .string()
+      .refine((it) => it.trim().split(/\s+/).filter(Boolean).length <= 50, {
+        message: `'sok' kan ikke inneholde flere enn 50 ord`,
+      })
+      .refine((it) => it.length <= 500, { message: `'sok' kan ikke være lengre enn 500 tegn` })
+      .optional(),
     fuzzy: booleanQuery.optional().default(false),
     sokemodus: z
       .string()
