@@ -26,7 +26,10 @@ export const standardParameters = {
     .optional()
     .default(10)
     .refine((value) => value <= 1000, "Antallet treff per side er satt for høyt."),
-  side: integerQuery.optional().default(0),
+  side: integerQuery
+    .optional()
+    .default(0)
+    .refine((value) => value >= 0, "Side kan ikke være negativ."),
   asciiKompatibel: booleanQuery.optional().default(true),
 };
 

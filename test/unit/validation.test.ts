@@ -59,6 +59,14 @@ describe("query validation", () => {
     });
   });
 
+  test("rejects a negative side parameter", () => {
+    expect(validate(GeneralSearchSchema, "sok=x&side=-1")).toEqual({
+      message: {
+        side: ["Side kan ikke være negativ."],
+      },
+    });
+  });
+
   test("enforces the 10,000-result pagination limit", () => {
     expect(validate(GeneralSearchSchema, "sok=x&treffPerSide=1000&side=10")).toEqual({
       message: {
