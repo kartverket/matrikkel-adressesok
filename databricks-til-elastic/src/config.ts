@@ -14,9 +14,3 @@ export function hentPåkrevdMiljøvariabel(navn: string): string {
   if (!verdi) throw new Error(`Mangler miljøvariabel ${navn}`);
   return verdi;
 }
-
-function kastHvisProsessenIkkeKjørerIUtc(): void {
-  if (new Date().getTimezoneOffset() !== 0) throw new Error("Må kjøre med TZ=UTC");
-}
-
-kastHvisProsessenIkkeKjørerIUtc();

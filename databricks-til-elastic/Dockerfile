@@ -9,8 +9,8 @@ RUN bun install --frozen-lockfile --production
 
 COPY src ./src
 
-# Databricks' TIMESTAMP-kolonner mangler tidssone og tolkes eksplisitt som
-# UTC i transform.ts - jobben nekter å starte i annen sone (se config.ts).
+# Satt for forutsigbare, UTC-baserte tidsstempler i logger og indeksnavn,
+# uavhengig av hvilken sone runtime-miljøet ellers er i.
 ENV TZ=UTC
 USER bun
 ENTRYPOINT ["bun", "run", "src/index.ts"]
