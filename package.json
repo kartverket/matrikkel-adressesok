@@ -10,12 +10,12 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "check": "biome check . && bun run typecheck && bun test test/unit",
+    "check": "biome check . && bun run typecheck && bun test ./test/unit",
     "format": "biome format --write .",
     "lint": "biome lint . --write",
     "typecheck": "bun x tsc --noEmit",
-    "test": "bun test test/unit",
-    "test:integration": "bun test test/integration",
+    "test": "bun test ./test/unit",
+    "test:integration": "bun test ./test/integration",
     "compose:up": "docker compose up -d --wait elasticsearch",
     "compose:down": "docker compose down --volumes"
   },

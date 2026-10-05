@@ -10,8 +10,8 @@
     "start:mock": "DATABRICKS_MOCK=true bun run src/index.ts",
     "es:reset": "curl -s 'http://localhost:9201/_cat/indices/ed_adressesok_v1-*?h=index' | xargs -n1 -I{} curl -fsS -X DELETE 'http://localhost:9201/{}' -o /dev/null",
     "reset": "bun run es:reset && bun run start:mock",
-    "test": "bun test test/unit",
-    "test:integration": "bun test test/integration",
+    "test": "bun test ./test/unit",
+    "test:integration": "bun test ./test/integration",
     "compose:up": "docker compose up -d --wait elasticsearch",
     "compose:down": "docker compose down --volumes",
     "typecheck": "tsc --noEmit"
