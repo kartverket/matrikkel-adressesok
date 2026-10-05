@@ -30,11 +30,3 @@ spec:
         value: "-prodtest"
       - name: TZ
         value: "UTC"
-    accessPolicy:
-      outbound:
-        external:
-          - host: "matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com" # TODO: riktig ES-host for miljøet
-            ports:
-              - name: https
-                port: 443
-                protocol: HTTPS
