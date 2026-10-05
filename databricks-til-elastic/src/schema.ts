@@ -103,7 +103,12 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
       "@version": { type: "keyword" },
       lokalid: { type: "keyword" },
       objtype: { type: "keyword" },
-      oppdateringsdato: { type: "date" },
+      oppdateringsdato: {
+        type: "date",
+        // Databricks sender "yyyy-MM-dd HH:mm:ss.SSS" (mellomrom, ikke "T").
+        // Ingen transformasjon av verdien - mappingen må godta rå-formatet.
+        format: "yyyy-MM-dd HH:mm:ss.SSS||strict_date_optional_time||epoch_millis",
+      },
       representasjonspunkt: { type: "geo_point" },
       adressetekst: tekst,
       adressetekstutenadressetilleggsnavn: tekst,
