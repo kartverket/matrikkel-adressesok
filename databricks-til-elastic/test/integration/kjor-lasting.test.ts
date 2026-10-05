@@ -13,7 +13,7 @@ describe("kjørLasting mot lokal Elasticsearch", () => {
     const indekser = await indekserMedAlias();
     await slettIndekser(indekser);
     await lukkKlienter();
-  });
+  }, 30_000);
 
   it("laster fixtures inn i en ny indeks og peker aliaset dit", async () => {
     await kjørLasting();
@@ -33,7 +33,7 @@ describe("kjørLasting mot lokal Elasticsearch", () => {
       query: { term: { lokalid: "2000001" } },
     });
     expect(treff.hits.hits.length).toBe(1);
-  });
+  }, 30_000);
 
   it("bytter aliaset til en ny indeks og sletter den gamle ved andre kjøring", async () => {
     const indekserFørAndreKjøring = await indekserMedAlias();
@@ -48,5 +48,5 @@ describe("kjørLasting mot lokal Elasticsearch", () => {
       const finnes = await es.indices.exists({ index: gammelIndeks });
       expect(finnes).toBe(false);
     }
-  });
+  }, 30_000);
 });
