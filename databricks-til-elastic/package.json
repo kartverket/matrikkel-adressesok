@@ -1,0 +1,30 @@
+{
+  "name": "databricks-til-elastic",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "start:mock": "DATABRICKS_MOCK=true bun run src/index.ts",
+    "es:reset": "curl -s 'http://localhost:9201/_cat/indices/ed_adressesok_v1-*?h=index' | xargs -n1 -I{} curl -fsS -X DELETE 'http://localhost:9201/{}' -o /dev/null",
+    "reset": "bun run es:reset && bun run start:mock",
+    "test": "bun test test/unit",
+    "test:integration": "bun test test/integration",
+    "compose:up": "docker compose up -d --wait elasticsearch",
+    "compose:down": "docker compose down --volumes",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matrikkel/shared-logging": "workspace:*",
+    "@matrikkel/shared-schema": "workspace:*",
+    "@databricks/sql": "^2.2.0",
+    "@elastic/elasticsearch": "^9.1",
+    "@elastic/transport": "^9.1",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0"
+  }
+}

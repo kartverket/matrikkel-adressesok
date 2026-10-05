@@ -1,18 +1,7 @@
 import { structuredLogger } from "@hono/structured-logger";
-import pino, { type Logger } from "pino";
-import type { AppConfig } from "./config";
+import { createLogger, type Logger } from "@matrikkel/shared-logging";
 
-export function createLogger(config: Pick<AppConfig, "logLevel">): Logger {
-  return pino({
-    level: config.logLevel,
-    base: null,
-    messageKey: "message",
-    timestamp: pino.stdTimeFunctions.isoTime,
-    formatters: {
-      level: (level) => ({ level: level.toUpperCase() }),
-    },
-  });
-}
+export { createLogger, type Logger };
 
 function logLevelForStatus(status: number): "info" | "warn" | "error" {
   if (status >= 500) return "error";

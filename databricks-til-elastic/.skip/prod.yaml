@@ -1,0 +1,43 @@
+apiVersion: skiperator.kartverket.no/v1alpha1
+kind: SKIPJob
+metadata:
+  name: databricks-til-elastic
+  namespace: matrikkel-main
+spec:
+  cron:
+    # Hver natt kl 03:00 UTC. SKIP-jobber kjører i UTC med mindre timeZone
+    # er satt - se dokumentasjonen.
+    schedule: "0 3 * * *"
+  job:
+    ttlSecondsAfterFinished: 3600
+    activeDeadlineSeconds: 3600
+  container:
+    image: "{{image}}"
+    resources:
+      limits:
+        memory: 1G
+      requests:
+        cpu: 100m
+        memory: 512M
+    envFrom:
+      - secret: databricks-til-elastic-secrets
+    env:
+      - name: DATABRICKS_TABLE
+        value: "catalog.skjema.matrikkel_adresse" # TODO: riktig catalog.skjema
+      - name: ES_URL
+        value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com"
+      - name: TZ
+        value: "UTC"
+    accessPolicy:
+      outbound:
+        external:
+          - host: "xxxxxxxxxxxxxxxx.cloud.databricks.com" # TODO: riktig Databricks-workspace-host
+            ports:
+              - name: https
+                port: 443
+                protocol: HTTPS
+          - host: "matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com"
+            ports:
+              - name: https
+                port: 443
+                protocol: HTTPS

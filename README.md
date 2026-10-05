@@ -37,9 +37,6 @@ bun run check
 # Run unit tests
 bun run test
 
-# Run integration tests (starts elasticsearch, and runs tests in an isolated container)
-bun run test:compose
-
-# Run integration tests (requires manuallu starting elasticsearch, see "docker:up" and "docker:down" scripts)
+# Run integration tests (requires docker compose for elasticsearch, see "compose:up" and "compose:down" scripts)
 bun run test:integration
 ```

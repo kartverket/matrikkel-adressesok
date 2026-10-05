@@ -3,6 +3,10 @@
   "version": "1.2.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "databricks-til-elastic"
+  ],
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
@@ -16,6 +20,8 @@
     "compose:down": "docker compose down --volumes"
   },
   "dependencies": {
+    "@matrikkel/shared-logging": "workspace:*",
+    "@matrikkel/shared-schema": "workspace:*",
     "@elastic/elasticsearch": "7",
     "@hono/prometheus": "^1.0.3",
     "@hono/structured-logger": "^1.0.0",

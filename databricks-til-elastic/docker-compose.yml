@@ -1,0 +1,16 @@
+# Lokalt utviklingsoppsett. Ikke produksjon.
+#
+# Databricks mockes ikke her - jobben kjøres med DATABRICKS_MOCK=true og
+# leser faste rader fra dev/fixtures/ i stedet for å koble til et ekte
+# warehouse. Se README.
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: >-
+        -Xms512m
+        -Xmx512m
+        -XX:TieredStopAtLevel=0
+    ports: ["9201:9200"]
