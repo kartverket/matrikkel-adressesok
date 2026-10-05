@@ -85,7 +85,8 @@ jobs:
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc #7.4.0
         with:
-          context: databricks-til-elastic
+          context: .
+          file: databricks-til-elastic/Dockerfile
           push: true
           tags: ${{ needs.version.outputs.image }}
           cache-from: type=gha
