@@ -1,0 +1,35 @@
+apiVersion: skiperator.kartverket.no/v1beta1
+kind: SKIPJob
+metadata:
+  name: databricks-til-elastic
+  namespace: matrikkel-prodtest
+spec:
+  cron:
+    # Hver time. SKIP-jobber kjører i UTC med mindre timeZone er satt - se
+    # dokumentasjonen.
+    schedule: "0 * * * *"
+  job:
+    ttlSecondsAfterFinished: 3600
+    activeDeadlineSeconds: 3600
+  image: "{{image}}"
+  resources:
+    limits:
+      memory: 1G
+    requests:
+      cpu: 100m
+      memory: 512M
+  accessPolicy:
+    outbound:
+      external:
+        - host: matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com
+  env:
+    - name: DATABRICKS_MOCK
+      value: "true" # Databricks-tilgang ikke klar enda - bruker fixtures inntil videre
+    - name: ES_URL
+      value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com" # TODO: riktig ES-url for miljøet
+    - name: ES_API_KEY
+      gsmSecretName: "databricks-to-elastic-es-api-key"
+    - name: INDEX_SUFFIX
+      value: "-prodtest"
+    - name: TZ
+      value: "UTC"

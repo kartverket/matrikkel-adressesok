@@ -6,7 +6,7 @@ import { createLogger } from "./logger";
 
 const registry = new Registry();
 const config = loadConfig();
-const logger = createLogger(config);
+const logger = createLogger({ level: config.logLevel });
 const elasticsearch = new ElasticsearchClient(config, logger);
 const app = createApp({ elasticsearch, logger, registry });
 
