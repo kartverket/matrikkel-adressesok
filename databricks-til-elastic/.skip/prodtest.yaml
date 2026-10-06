@@ -18,6 +18,10 @@ spec:
     requests:
       cpu: 100m
       memory: 512M
+  accessPolicy:
+    outbound:
+      external:
+        - host: matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com
   env:
     - name: DATABRICKS_MOCK
       value: "true" # Databricks-tilgang ikke klar enda - bruker fixtures inntil videre
