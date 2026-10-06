@@ -5,48 +5,48 @@ process.env.ES_URL ??= "http://localhost:9201";
 process.env.INDEX_SUFFIX = `-test-${Date.now()}`;
 
 const { ALIAS } = await import("../../src/config");
-const { es, indekserMedAlias, slettIndekser } = await import("../../src/elastic");
-const { kjørLasting, lukkKlienter } = await import("../../src/runner");
+const { es, indicesWithAlias, deleteIndices } = await import("../../src/elastic");
+const { runLoad, closeClients } = await import("../../src/runner");
 
-describe("kjørLasting mot lokal Elasticsearch", () => {
+describe("runLoad mot lokal Elasticsearch", () => {
   afterAll(async () => {
-    const indekser = await indekserMedAlias();
-    await slettIndekser(indekser);
-    await lukkKlienter();
+    const indices = await indicesWithAlias();
+    await deleteIndices(indices);
+    await closeClients();
   }, 30_000);
 
   it("laster fixtures inn i en ny indeks og peker aliaset dit", async () => {
-    await kjørLasting();
+    await runLoad();
 
-    const indekser = await indekserMedAlias();
-    expect(indekser.length).toBe(1);
+    const indices = await indicesWithAlias();
+    expect(indices.length).toBe(1);
 
-    const indeksnavn = indekser[0] as string;
-    const { count } = await es.count({ index: indeksnavn });
+    const indexName = indices[0] as string;
+    const { count } = await es.count({ index: indexName });
     expect(count).toBeGreaterThan(0);
 
     const alias = await es.indices.getAlias({ name: ALIAS });
-    expect(Object.keys(alias)).toEqual([indeksnavn]);
+    expect(Object.keys(alias)).toEqual([indexName]);
 
-    const treff = await es.search({
-      index: indeksnavn,
+    const hits = await es.search({
+      index: indexName,
       query: { term: { lokalid: "2000001" } },
     });
-    expect(treff.hits.hits.length).toBe(1);
+    expect(hits.hits.hits.length).toBe(1);
   }, 30_000);
 
   it("bytter aliaset til en ny indeks og sletter den gamle ved andre kjøring", async () => {
-    const indekserFørAndreKjøring = await indekserMedAlias();
+    const indicesBeforeSecondRun = await indicesWithAlias();
 
-    await kjørLasting();
+    await runLoad();
 
-    const indekserEtterAndreKjøring = await indekserMedAlias();
-    expect(indekserEtterAndreKjøring.length).toBe(1);
-    expect(indekserEtterAndreKjøring).not.toEqual(indekserFørAndreKjøring);
+    const indicesAfterSecondRun = await indicesWithAlias();
+    expect(indicesAfterSecondRun.length).toBe(1);
+    expect(indicesAfterSecondRun).not.toEqual(indicesBeforeSecondRun);
 
-    for (const gammelIndeks of indekserFørAndreKjøring) {
-      const finnes = await es.indices.exists({ index: gammelIndeks });
-      expect(finnes).toBe(false);
+    for (const oldIndex of indicesBeforeSecondRun) {
+      const exists = await es.indices.exists({ index: oldIndex });
+      expect(exists).toBe(false);
     }
   }, 30_000);
 });

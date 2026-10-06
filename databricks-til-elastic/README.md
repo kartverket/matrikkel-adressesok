@@ -46,7 +46,7 @@ Databricks-warehouse. Bun laster `.env` automatisk.
 | `bun run reset` | Ren tavle lokalt: slett indekser, importer fixtures på nytt |
 | `bun run es:reset` | Bare slett indeksene som matcher prefikset |
 | `bun test` / `bun run test` | Enhetstester (`test/unit`) - ingen I/O, trenger ikke docker compose |
-| `bun run test:integration` | Kjører hele jobben (`kjørLasting`) mot ekte Elasticsearch i docker compose (`test/integration`) |
+| `bun run test:integration` | Kjører hele jobben (`runLoad`) mot ekte Elasticsearch i docker compose (`test/integration`) |
 | `bun run compose:up` | Starter Elasticsearch i bakgrunnen (`localhost:9201`), venter til den er klar |
 | `bun run compose:down` | Stopper og fjerner Elasticsearch-containeren og volumet |
 | `bun run typecheck` | `tsc --noEmit` |
@@ -112,7 +112,7 @@ langsom at den ikke blir ferdig.
 ## Integrasjonstester
 
 [test/integration/kjor-lasting.test.ts](test/integration/kjor-lasting.test.ts)
-kjører hele jobben (`kjørLasting` fra [runner.ts](src/runner.ts)) mot en ekte
+kjører hele jobben (`runLoad` fra [runner.ts](src/runner.ts)) mot en ekte
 Elasticsearch, med `DATABRICKS_MOCK=true` og fixturene i
 [dev/fixtures](dev/fixtures) som kilde. Den setter `INDEX_SUFFIX` til noe
 unikt per kjøring (basert på `Date.now()`) slik at testen ikke kolliderer med

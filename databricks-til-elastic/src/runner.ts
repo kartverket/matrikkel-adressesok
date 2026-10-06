@@ -1,91 +1,86 @@
-import { assertHealthy, relativtAvvikProsent } from "./check";
+import { assertHealthy, relativeDeviationPercent } from "./check";
 import * as databricks from "./databricks";
 import * as databricksMock from "./databricks.mock";
 import {
-  byttAliasAtomisk,
+  createIndex,
+  deleteIndices,
   docCount,
   es,
-  gjørIndeksSøkbar,
-  indekserMedAlias,
-  lastDokumentstrøm,
-  nyttIndeksnavn,
-  opprettIndeks,
-  slettIndekser,
+  indicesWithAlias,
+  loadDocumentStream,
+  makeIndexSearchable,
+  newIndexName,
+  swapAliasAtomically,
 } from "./elastic";
 import { logger } from "./logger";
 
-function kildeForDenneKjøringen() {
+function sourceForThisRun() {
   return process.env.DATABRICKS_MOCK === "true" ? databricksMock : databricks;
 }
 
-export async function kjørLasting(): Promise<void> {
-  const tidspunktForKjøring = new Date();
-  const nyIndeks = nyttIndeksnavn(tidspunktForKjøring);
-  const timestamp = tidspunktForKjøring.toISOString();
-  const kilde = kildeForDenneKjøringen();
+export async function runLoad(): Promise<void> {
+  const runStartedAt = new Date();
+  const newIndex = newIndexName(runStartedAt);
+  const timestamp = runStartedAt.toISOString();
+  const source = sourceForThisRun();
 
-  const gamleIndekserAliasetPekerPå = await indekserMedAlias();
-  logger.info({ nyIndeks, gamleIndekserAliasetPekerPå }, "starter");
+  const previousIndicesWithAlias = await indicesWithAlias();
+  logger.info({ newIndex, previousIndicesWithAlias }, "starter");
 
-  await opprettIndeks(nyIndeks);
-  const bulkStatistikk = await lastDokumentstrøm(nyIndeks, kilde.documents(timestamp));
+  await createIndex(newIndex);
+  const bulkStats = await loadDocumentStream(newIndex, source.documents(timestamp));
   logger.info(
     {
-      antallDokumenterGodkjent: bulkStatistikk.successful,
-      antallDokumenterAvvist: bulkStatistikk.failed,
-      antallForsøkPåNytt: bulkStatistikk.retry,
-      tidsbrukSekunder: Math.round(bulkStatistikk.time / 1000),
-      dataMegabyte: Number((bulkStatistikk.bytes / 1024 / 1024).toFixed(1)),
+      documentsAccepted: bulkStats.successful,
+      documentsRejected: bulkStats.failed,
+      retries: bulkStats.retry,
+      durationSeconds: Math.round(bulkStats.time / 1000),
+      dataMegabytes: Number((bulkStats.bytes / 1024 / 1024).toFixed(1)),
     },
     "lasting ferdig",
   );
 
-  await gjørIndeksSøkbar(nyIndeks);
+  await makeIndexSearchable(newIndex);
 
-  const antallDokumenterINyIndeks = await docCount(nyIndeks);
-  const antallDokumenterIForrigeIndeks = gamleIndekserAliasetPekerPå.length
-    ? await docCount(gamleIndekserAliasetPekerPå)
+  const documentsInNewIndex = await docCount(newIndex);
+  const documentsInPreviousIndex = previousIndicesWithAlias.length
+    ? await docCount(previousIndicesWithAlias)
     : 0;
-  const avvikProsent = relativtAvvikProsent(
-    antallDokumenterINyIndeks,
-    antallDokumenterIForrigeIndeks,
-  );
+  const deviationPercent = relativeDeviationPercent(documentsInNewIndex, documentsInPreviousIndex);
   logger.info(
     {
-      antallDokumenterINyIndeks,
-      antallDokumenterIForrigeIndeks,
-      avvikProsent: Number(avvikProsent.toFixed(2)),
+      documentsInNewIndex,
+      documentsInPreviousIndex,
+      deviationPercent: Number(deviationPercent.toFixed(2)),
     },
     "sammenligner med gammel indeks",
   );
 
   assertHealthy({
-    antallGodkjentAvBulkHelper: bulkStatistikk.successful,
-    antallAvvistAvElasticsearch: bulkStatistikk.failed,
-    antallDokumenterINyIndeks,
-    antallDokumenterIForrigeIndeks,
+    acceptedByBulkHelper: bulkStats.successful,
+    rejectedByElasticsearch: bulkStats.failed,
+    documentsInNewIndex,
+    documentsInPreviousIndex,
   });
 
-  await byttAliasAtomisk(nyIndeks, gamleIndekserAliasetPekerPå);
-  logger.info({ nyIndeks, antallDokumenterINyIndeks }, "alias byttet, ferdig");
+  await swapAliasAtomically(newIndex, previousIndicesWithAlias);
+  logger.info({ newIndex, documentsInNewIndex }, "alias byttet, ferdig");
 
-  if (gamleIndekserAliasetPekerPå.length) {
-    await slettIndekser(gamleIndekserAliasetPekerPå).catch((feilVedSletting) =>
+  if (previousIndicesWithAlias.length) {
+    await deleteIndices(previousIndicesWithAlias).catch((deleteError) =>
       logger.warn(
-        { err: feilVedSletting, gamleIndekserAliasetPekerPå },
+        { err: deleteError, previousIndicesWithAlias },
         "klarte ikke slette gamle indekser",
       ),
     );
   }
 }
 
-export async function lukkKlienter(): Promise<void> {
-  await kildeForDenneKjøringen()
+export async function closeClients(): Promise<void> {
+  await sourceForThisRun()
     .close()
-    .catch((feilVedLukking) => logger.warn({ err: feilVedLukking }, "klarte ikke lukke kilden"));
+    .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke kilden"));
   await es
     .close()
-    .catch((feilVedLukking) =>
-      logger.warn({ err: feilVedLukking }, "klarte ikke lukke ES-klienten"),
-    );
+    .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke ES-klienten"));
 }

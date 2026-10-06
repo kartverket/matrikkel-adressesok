@@ -1,52 +1,49 @@
 import {
-  MAKS_TILLATT_AVVIK_PROSENT_MOT_FORRIGE_INDEKS,
-  MINSTE_ANTALL_DOKUMENTER_FOR_VELLYKKET_LASTING,
+  MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX,
+  MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD,
 } from "./config";
 
 export class CheckFailed extends Error {
   override readonly name = "CheckFailed";
 }
 
-export function relativtAvvikProsent(nyVerdi: number, forrigeVerdi: number): number {
-  if (forrigeVerdi === 0) return nyVerdi === 0 ? 0 : 100;
-  return (Math.abs(nyVerdi - forrigeVerdi) / forrigeVerdi) * 100;
+export function relativeDeviationPercent(newValue: number, previousValue: number): number {
+  if (previousValue === 0) return newValue === 0 ? 0 : 100;
+  return (Math.abs(newValue - previousValue) / previousValue) * 100;
 }
 
 export interface Counts {
-  antallGodkjentAvBulkHelper: number;
-  antallAvvistAvElasticsearch: number;
-  antallDokumenterINyIndeks: number;
-  antallDokumenterIForrigeIndeks: number;
+  acceptedByBulkHelper: number;
+  rejectedByElasticsearch: number;
+  documentsInNewIndex: number;
+  documentsInPreviousIndex: number;
 }
 
 export function assertHealthy({
-  antallGodkjentAvBulkHelper,
-  antallAvvistAvElasticsearch,
-  antallDokumenterINyIndeks,
-  antallDokumenterIForrigeIndeks,
+  acceptedByBulkHelper,
+  rejectedByElasticsearch,
+  documentsInNewIndex,
+  documentsInPreviousIndex,
 }: Counts): void {
-  if (antallAvvistAvElasticsearch > 0) {
-    throw new CheckFailed(`${antallAvvistAvElasticsearch} dokumenter ble avvist`);
+  if (rejectedByElasticsearch > 0) {
+    throw new CheckFailed(`${rejectedByElasticsearch} dokumenter ble avvist`);
   }
-  if (antallDokumenterINyIndeks !== antallGodkjentAvBulkHelper) {
+  if (documentsInNewIndex !== acceptedByBulkHelper) {
     throw new CheckFailed(
-      `indeksen har ${antallDokumenterINyIndeks} dokumenter, forventet ${antallGodkjentAvBulkHelper}`,
+      `indeksen har ${documentsInNewIndex} dokumenter, forventet ${acceptedByBulkHelper}`,
     );
   }
-  if (antallDokumenterINyIndeks < MINSTE_ANTALL_DOKUMENTER_FOR_VELLYKKET_LASTING) {
+  if (documentsInNewIndex < MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD) {
     throw new CheckFailed(
-      `bare ${antallDokumenterINyIndeks} dokumenter, forventet minst ${MINSTE_ANTALL_DOKUMENTER_FOR_VELLYKKET_LASTING}`,
+      `bare ${documentsInNewIndex} dokumenter, forventet minst ${MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD}`,
     );
   }
 
-  const avvikProsent = relativtAvvikProsent(
-    antallDokumenterINyIndeks,
-    antallDokumenterIForrigeIndeks,
-  );
+  const deviationPercent = relativeDeviationPercent(documentsInNewIndex, documentsInPreviousIndex);
   if (
-    antallDokumenterIForrigeIndeks > 0 &&
-    avvikProsent > MAKS_TILLATT_AVVIK_PROSENT_MOT_FORRIGE_INDEKS
+    documentsInPreviousIndex > 0 &&
+    deviationPercent > MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX
   ) {
-    throw new CheckFailed(`${avvikProsent.toFixed(1)} % avvik fra gammel indeks`);
+    throw new CheckFailed(`${deviationPercent.toFixed(1)} % avvik fra gammel indeks`);
   }
 }

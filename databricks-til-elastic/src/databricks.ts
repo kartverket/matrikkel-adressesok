@@ -1,21 +1,21 @@
 import { DBSQLClient } from "@databricks/sql";
-import { ANTALL_RADER_PER_PORSJON_FRA_DATABRICKS, hentPåkrevdMiljøvariabel } from "./config";
+import { getRequiredEnvVar, ROWS_PER_BATCH_FROM_DATABRICKS } from "./config";
 import { logger } from "./logger";
 import { type AddressDocument, COLUMNS, type DatabricksRow } from "./schema";
-import { radTilDokument } from "./transform";
+import { rowToDocument } from "./transform";
 
 type Session = Awaited<ReturnType<DBSQLClient["openSession"]>>;
 
 const client = new DBSQLClient();
 let session: Promise<Session> | undefined;
 
-function hentSesjon(): Promise<Session> {
+function getSession(): Promise<Session> {
   if (!session) {
     session = client
       .connect({
-        host: hentPåkrevdMiljøvariabel("DATABRICKS_HOST"),
-        path: hentPåkrevdMiljøvariabel("DATABRICKS_HTTP_PATH"),
-        token: hentPåkrevdMiljøvariabel("DATABRICKS_TOKEN"),
+        host: getRequiredEnvVar("DATABRICKS_HOST"),
+        path: getRequiredEnvVar("DATABRICKS_HTTP_PATH"),
+        token: getRequiredEnvVar("DATABRICKS_TOKEN"),
       })
       .then((c) => c.openSession())
       .catch((err) => {
@@ -31,36 +31,36 @@ function hentSesjon(): Promise<Session> {
  * den ligger i Databricks.
  */
 export async function* documents(timestamp: string): AsyncGenerator<AddressDocument> {
-  const table = hentPåkrevdMiljøvariabel("DATABRICKS_TABLE");
-  kastHvisUgyldigTabellnavn(table);
+  const table = getRequiredEnvVar("DATABRICKS_TABLE");
+  throwIfInvalidTableName(table);
 
   const select = COLUMNS.map((c) => `\`${c}\``).join(", ");
   const query = `select ${select} from ${table}`;
 
-  const sql = await hentSesjon();
+  const sql = await getSession();
   const operation = await sql.executeStatement(query);
 
   let rows = 0;
   try {
     for await (const row of operation.iterateRows({
-      maxRows: ANTALL_RADER_PER_PORSJON_FRA_DATABRICKS,
+      maxRows: ROWS_PER_BATCH_FROM_DATABRICKS,
     })) {
-      const doc = radTilDokument(row as DatabricksRow, timestamp);
+      const doc = rowToDocument(row as DatabricksRow, timestamp);
       if (doc) yield doc;
       else logger.warn({ table }, "rad uten lokalid, hoppet over");
       rows++;
     }
   } finally {
-    await lukkOperasjon(operation, table);
+    await closeOperation(operation, table);
   }
   logger.info({ table, rows }, "tabell lest");
 }
 
-function kastHvisUgyldigTabellnavn(table: string): void {
+function throwIfInvalidTableName(table: string): void {
   if (!/^[\w.]+$/.test(table)) throw new Error(`Ugyldig DATABRICKS_TABLE: ${table}`);
 }
 
-async function lukkOperasjon(
+async function closeOperation(
   operation: Awaited<ReturnType<Session["executeStatement"]>>,
   table: string,
 ): Promise<void> {
@@ -70,10 +70,10 @@ async function lukkOperasjon(
 }
 
 export async function close(): Promise<void> {
-  if (session) await lukkSesjon(session);
+  if (session) await closeSession(session);
   await client.close();
 }
 
-async function lukkSesjon(økt: Promise<Session>): Promise<void> {
-  await økt.then((s) => s.close()).catch(() => undefined);
+async function closeSession(sessionPromise: Promise<Session>): Promise<void> {
+  await sessionPromise.then((s) => s.close()).catch(() => undefined);
 }
