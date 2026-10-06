@@ -129,6 +129,7 @@ jobs:
         with:
           cluster: 'atkv3-prod'
           resource: 'databricks-til-elastic/.skip/prodtest.yaml'
+          wait: false
           var: |
             image=${{ needs.version.outputs.image }}
   deploy-prod:
@@ -152,5 +153,6 @@ jobs:
         with:
           cluster: 'atkv3-prod'
           resource: 'databricks-til-elastic/.skip/prod.yaml'
+          wait: false
           var: |
             image=${{ needs.version.outputs.image }}
