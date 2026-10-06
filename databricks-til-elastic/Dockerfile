@@ -13,6 +13,8 @@ COPY databricks-til-elastic/package.json ./databricks-til-elastic/package.json
 RUN bun install --frozen-lockfile --production --filter databricks-til-elastic
 
 COPY databricks-til-elastic/src ./databricks-til-elastic/src
+# Fixtures for DATABRICKS_MOCK=true - brukes inntil ekte Databricks-tilgang er klar.
+COPY databricks-til-elastic/dev ./databricks-til-elastic/dev
 WORKDIR /app/databricks-til-elastic
 
 # Satt for forutsigbare, UTC-baserte tidsstempler i logger og indeksnavn,
