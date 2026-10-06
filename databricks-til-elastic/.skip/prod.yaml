@@ -18,12 +18,12 @@ spec:
     requests:
       cpu: 100m
       memory: 512M
-  envFrom:
-    - secret: databricks-til-elastic-secrets
   env:
     - name: DATABRICKS_TABLE
       value: "catalog.skjema.matrikkel_adresse" # TODO: riktig catalog.skjema
     - name: ES_URL
       value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com"
+    - name: ES_API_KEY
+      gsmSecretName: "databricks-to-elastic-es-api-key-prod"
     - name: TZ
       value: "UTC"
