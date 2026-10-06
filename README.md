@@ -1,42 +1,29 @@
-# Matrikkel address API — Bun/Hono
+# matrikkel-adressesok
 
-## Requirements
+Monorepo med Matrikkelens adressesøk-tjenester.
 
-- Bun 1.3 or newer
-- Docker with Compose for the isolated Elasticsearch integration tests
+## Struktur
 
-## Configuration
-
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `ELS_ADRESSER_URL` | yes | — | Single load-balanced Elasticsearch URL |
-| `ELS_ADRESSER_USERNAME` | no | — | Elasticsearch basic-auth username |
-| `ELS_ADRESSER_PASSWORD` | no | — | Elasticsearch basic-auth password |
-| `ELS_ADRESSER_INDEX` | no | `adressesok` | Elasticsearch index |
-| `ELS_ADRESSER_TIMEOUT_MS` | no | `20000` | Elasticsearch request timeout |
-| `ADRESSER_API_LOG_LEVEL` | no | `ERROR` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |
-| `PORT` | no | `3000` | HTTP listen port |
-
-Copy `.env.example` to `.env.local` or export the variables in your shell. Bun loads `.env.local` automatically.
-
-## Run locally
-
-```bash
-bun install
-bun run dev
+```
+apps/
+  adressesok/              Matrikkel address API (Bun/Hono)
+  databricks-til-elastic/  SKIPJob som laster matrikkeladresser fra Databricks til Elasticsearch
+packages/
+  shared-logging/          Delt logging-oppsett
+  shared-schema/           Delte typer/skjema
 ```
 
-## Tests
+Se README i hver app-mappe for app-spesifikk dokumentasjon, oppsett og kommandoer.
 
-Run formatting/lint checks, strict TypeScript compilation, and unit tests:
+## Felles verktøy
+
+Fra repo-roten:
 
 ```bash
-# Run biome, typechecking and unit tests
-bun run check
-
-# Run unit tests
-bun run test
-
-# Run integration tests (requires docker compose for elasticsearch, see "compose:up" and "compose:down" scripts)
-bun run test:integration
+bun install        # installerer alle workspaces
+bun run format      # biome format
+bun run lint        # biome lint
 ```
+
+`compose.yaml` i roten starter en lokal Elasticsearch for `apps/adressesok` sine
+integrasjonstester (se `apps/adressesok/package.json` for `compose:up`/`compose:down`).
