@@ -22,11 +22,16 @@ jobs:
   version:
     name: Calculate Version
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/adressesok
     outputs:
       version: ${{ steps.version-string.outputs.version }}
       image: ${{ steps.version-string.outputs.image }}
 
     steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #7.0.1
       - name: Generate version string
         id: version-string
         shell: bash
@@ -36,23 +41,26 @@ jobs:
           echo "image=ghcr.io/kartverket/matrikkel-adressesok/matrikkel-adressesok:${version}" >> "$GITHUB_OUTPUT"
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/adressesok
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #7.0.1
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
-      - run: bun run --filter adressesok check
-      - run: bun run --filter adressesok compose:up
-      - run: bun run --filter adressesok test:integration
+      - run: bun run check
+      - run: bun run compose:up
+      - run: bun run test:integration
         env:
           ELS_ADRESSER_URL: http://localhost:9200
           ELS_ADRESSER_INDEX: adressesok-test
           ADRESSER_API_LOG_LEVEL: ERROR
-      - run: bun run --filter adressesok compose:down
+      - run: bun run compose:down
         if: always()
 
   build:
