@@ -30,7 +30,7 @@ som streng).
 
 ```bash
 bun install
-docker compose up -d
+bun run compose:up
 cp .env.example .env
 bun start
 ```
@@ -88,7 +88,7 @@ fra `@elastic/elasticsearch`. Strømming med konstant minnebruk kommer fra
 
 ## Lokalt testmiljø
 
-`docker compose up -d` gir Elasticsearch på 9201. Det kobles ikke mot noe
+`bun run compose:up` gir Elasticsearch på 9201. Det kobles ikke mot noe
 ekte Databricks-warehouse lokalt - kjør med `DATABRICKS_MOCK=true` (satt i
 `.env.example`), så leser jobben i stedet 1 079 faste rader fra
 [dev/fixtures/matrikkel_adresse.json](dev/fixtures/matrikkel_adresse.json),
@@ -102,7 +102,7 @@ med `exit code 134` (SIGSEGV i JIT-kompilert kode). Den starter iblant hvis
 du prøver på nytt:
 
 ```bash
-docker compose down -v && docker compose up -d
+bun run compose:down && bun run compose:up
 ```
 
 Får du den ikke opp, pek `ES_URL` mot et remote dev-cluster i stedet. Å slå

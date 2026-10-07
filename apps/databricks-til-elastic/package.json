@@ -12,8 +12,8 @@
     "reset": "bun run es:reset && bun run start:mock",
     "test": "bun test ./test/unit",
     "test:integration": "bun test ./test/integration",
-    "compose:up": "docker compose up -d --wait elasticsearch",
-    "compose:down": "docker compose down --volumes",
+    "compose:up": "docker compose -f ../../compose.yaml up -d --wait elasticsearch-databricks-til-elastic",
+    "compose:down": "docker compose -f ../../compose.yaml rm -fsv elasticsearch-databricks-til-elastic",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

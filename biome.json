@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -42,7 +42,7 @@
   },
   "overrides": [
     {
-      "includes": ["test/**/*.ts"],
+      "includes": ["**/test/**/*.ts"],
       "linter": {
         "rules": {
           "complexity": {
@@ -52,7 +52,7 @@
       }
     },
     {
-      "includes": ["src/openapi.json"],
+      "includes": ["**/src/openapi.json"],
       "formatter": {
         "enabled": false
       },

@@ -1,0 +1,34 @@
+{
+  "name": "adressesok",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "check": "biome check . && bun run typecheck && bun test ./test/unit",
+    "typecheck": "bun x tsc --noEmit",
+    "test": "bun test ./test/unit",
+    "test:integration": "bun test ./test/integration",
+    "compose:up": "docker compose -f ../../compose.yaml up -d --wait elasticsearch",
+    "compose:down": "docker compose -f ../../compose.yaml rm -fsv elasticsearch"
+  },
+  "dependencies": {
+    "@matrikkel/shared-logging": "workspace:*",
+    "@matrikkel/shared-schema": "workspace:*",
+    "@elastic/elasticsearch": "7",
+    "@hono/prometheus": "^1.0.3",
+    "@hono/structured-logger": "^1.0.0",
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-validator": "^0.9.1",
+    "epsg-index": "^2.0.0",
+    "hono": "^4.13.12",
+    "pino": "^10.4.0",
+    "proj4": "^2.22.0",
+    "prom-client": "^15.1.3",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}
