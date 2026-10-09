@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appWith } from "./test.utils";
+import { appWith, appWithCapturedLogs } from "./test.utils";
 
 describe("HTTP application", () => {
   test("serves the search response in the legacy shape", async () => {
@@ -122,7 +122,7 @@ describe("HTTP application", () => {
   });
 
   test("uses the Hono Zod validation middleware", async () => {
-    const app = appWith({
+    const { app, entries } = appWithCapturedLogs({
       isReady: async () => true,
       search: async () => ({ total: 0, hits: [] }),
     });
@@ -133,6 +133,12 @@ describe("HTTP application", () => {
         objtype: ["Feil i søkeparameter. Gyldige verdier er: ('Matrikkeladresse', 'Vegadresse')"],
       },
     });
+
+    // Ugyldig bruk av APIet er forventet klientfeil, ikke en driftsfeil som
+    // bør varsles, og skal derfor logges som info, ikke warn.
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.level).toBe("INFO");
+    expect(entries[0]?.status).toBe(400);
   });
 
   test("acceps duplicated scaler query parameters, and uses first occurence", async () => {
@@ -189,7 +195,7 @@ describe("HTTP application", () => {
   });
 
   test("rejects unsupported response filters", async () => {
-    const app = appWith({
+    const { app, entries } = appWithCapturedLogs({
       isReady: async () => true,
       search: async () => ({ total: 0, hits: [] }),
     });
@@ -199,6 +205,12 @@ describe("HTTP application", () => {
     expect(await response.json()).toEqual({
       message: "Feil i filtreringsparameter",
     });
+
+    // Samme som over: ugyldig filterparameter er klientens feil bruk av
+    // APIet, og skal logges som info, ikke warn.
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.level).toBe("INFO");
+    expect(entries[0]?.status).toBe(400);
   });
 
   test("reports readiness based on Elasticsearch", async () => {

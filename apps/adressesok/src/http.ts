@@ -1,15 +1,24 @@
+/**
+ * Loggnivå en feil skal logges med, satt av koden som kaster feilen.
+ * Dette lar oss skille mellom feil som er forventet klientbruk av APIet
+ * (f.eks. ugyldige søkeparametere) og feil som faktisk bør varsles.
+ */
+export type ErrorLogLevel = "info" | "warn" | "error";
+
 export class HttpError extends Error {
   constructor(
     public readonly status: number,
     public readonly payload: unknown,
+    public readonly logLevel: ErrorLogLevel = "warn",
   ) {
     super(typeof payload === "string" ? payload : JSON.stringify(payload));
     this.name = "HttpError";
   }
 }
 
+/** Ugyldig bruk av APIet (feil/manglende søkeparametere) */
 export function badRequest(message: unknown): never {
-  throw new HttpError(400, { message });
+  throw new HttpError(400, { message }, "info");
 }
 
 function escapeNonAscii(json: string): string {

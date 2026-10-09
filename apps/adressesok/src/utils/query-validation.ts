@@ -1,6 +1,6 @@
 import { validator } from "hono/validator";
 import { z } from "zod";
-import { jsonResponse } from "../http";
+import { HttpError } from "../http";
 import { DEFAULT_SRID } from "../projection";
 
 export const integerQuery = z
@@ -102,5 +102,5 @@ export const validateQuery = <T extends z.ZodType>(schema: T) =>
     const result = await schema.safeParseAsync(query);
     if (result.success) return result.data;
 
-    return jsonResponse({ message: formatValidationErrors(result.error) }, 400, true);
+    throw new HttpError(400, { message: formatValidationErrors(result.error) }, "info");
   });
