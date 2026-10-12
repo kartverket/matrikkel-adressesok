@@ -1,6 +1,6 @@
 import { assertHealthy, relativeDeviationPercent } from "./check";
-import * as databricks from "./databricks";
-import * as databricksMock from "./databricks.mock";
+import { createDatabricksSource } from "./databricks";
+import { createFakeDatabricksClient } from "./databricks.mock";
 import {
   createIndex,
   deleteIndices,
@@ -14,15 +14,15 @@ import {
 } from "./elastic";
 import { logger } from "./logger";
 
-function sourceForThisRun() {
-  return process.env.DATABRICKS_MOCK === "true" ? databricksMock : databricks;
-}
+const source =
+  process.env.DATABRICKS_MOCK === "true"
+    ? createDatabricksSource(createFakeDatabricksClient)
+    : createDatabricksSource();
 
 export async function runLoad(): Promise<void> {
   const runStartedAt = new Date();
   const newIndex = newIndexName(runStartedAt);
   const timestamp = runStartedAt.toISOString();
-  const source = sourceForThisRun();
 
   const previousIndicesWithAlias = await indicesWithAlias();
   logger.info({ newIndex, previousIndicesWithAlias }, "starter");
@@ -77,7 +77,7 @@ export async function runLoad(): Promise<void> {
 }
 
 export async function closeClients(): Promise<void> {
-  await sourceForThisRun()
+  await source
     .close()
     .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke kilden"));
   await es

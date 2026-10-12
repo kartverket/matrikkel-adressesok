@@ -1,20 +1,37 @@
-import { logger } from "./logger";
-import type { AddressDocument, DatabricksRow } from "./schema";
-import { rowToDocument } from "./transform";
+import type { MinimalDatabricksClient } from "./databricks";
+import type { DatabricksRow } from "./schema";
 
 const fixtureFilePath = new URL("../dev/fixtures/matrikkel_adresse.json", import.meta.url);
 
-export async function* documents(timestamp: string): AsyncGenerator<AddressDocument> {
-  const rows = (await Bun.file(fixtureFilePath).json()) as DatabricksRow[];
-
-  let count = 0;
-  for (const row of rows) {
-    const doc = rowToDocument(row, timestamp);
-    if (doc) yield doc;
-    else logger.warn({ source: "mock" }, "rad uten lokalid, hoppet over");
-    count++;
-  }
-  logger.info({ rows: count, fixture: fixtureFilePath.pathname }, "mock-fixture lest");
+/**
+ * Falsk @databricks/sql-klient som leser fixture-rader fra disk i stedet for
+ * å spørre et ekte warehouse. Brukes sammen med `createDatabricksSource()`
+ * slik at dev/test kjører nøyaktig samme spørrings-, transformasjons- og
+ * oppryddingslogikk som i prod - bare med en annen transport under.
+ *
+ * `connect()`/`host`/`path` osv. kalles og valideres som normalt (se
+ * databricks.ts), men ignoreres her; svaret er alltid fixture-dataene.
+ */
+export function createFakeDatabricksClient(): MinimalDatabricksClient {
+  return {
+    async connect() {
+      return {
+        async openSession() {
+          return {
+            async executeStatement() {
+              const rows = (await Bun.file(fixtureFilePath).json()) as DatabricksRow[];
+              return {
+                iterateRows: async function* () {
+                  for (const row of rows) yield row;
+                },
+                async close() {},
+              };
+            },
+            async close() {},
+          };
+        },
+      };
+    },
+    async close() {},
+  };
 }
-
-export async function close(): Promise<void> {}

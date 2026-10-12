@@ -22,9 +22,18 @@ spec:
     outbound:
       external:
         - host: matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com
+        - host: 3359340685875444.4.gcp.databricks.com
   env:
-    - name: DATABRICKS_MOCK
-      value: "true" # Databricks-tilgang ikke klar enda - bruker fixtures inntil videre
+    - name: DATABRICKS_HOST
+      value: "3359340685875444.4.gcp.databricks.com"
+    - name: DATABRICKS_HTTP_PATH
+      value: "/sql/1.0/warehouses/7b7b34fd5e55d6f1"
+    - name: DATABRICKS_CLIENT_ID
+      gsmSecretName: "databricks-to-elastic-databricks-client-id"
+    - name: DATABRICKS_CLIENT_SECRET
+      gsmSecretName: "databricks-to-elastic-databricks-client-secret"
+    - name: DATABRICKS_TABLE
+      value: "matrikkel_adressesok_produkt_prodtest"
     - name: ES_URL
       value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com" # TODO: riktig ES-url for miljøet
     - name: ES_API_KEY

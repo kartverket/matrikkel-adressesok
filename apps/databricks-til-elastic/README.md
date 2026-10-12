@@ -21,10 +21,11 @@ rydder bare opp indekser som akkurat ble byttet bort fra alias i steg 5 -
 feiler oppryddingen, logges det som en advarsel, men jobben regnes likevel
 som vellykket siden aliaset allerede peker riktig.
 
-Jobben gjør ingen massering av dataene underveis - tabellen i Databricks
-velges rett ut og sendes til Elasticsearch slik den ligger, bortsett fra det
-`transform.ts` må gjøre for at ES skal godta formen (geo_point, `lokalid`
-som streng).
+Jobben gjør noe massering av dataene underveis, utover det rene
+"velg ut og send videre": `transform.ts` tolker Databricks sine JSON-strenger
+for `representasjonspunkt`/`atkomstpunkt`/`bruksenhetsnummer`, reprojiserer
+koordinatene til EPSG:4258 og normaliserer `objtype` til hovedappens
+kapitaliserte form - se "Datamodell" under.
 
 ## Kjøring
 
@@ -36,8 +37,9 @@ bun start
 ```
 
 [.env.example](.env.example) peker på det lokale testmiljøet med
-`DATABRICKS_MOCK=true`, så dette fungerer uten tilgang til et ekte
-Databricks-warehouse. Bun laster `.env` automatisk.
+`DATABRICKS_MOCK=true` og placeholder-verdier for de påkrevde
+Databricks-variablene (brukes ikke reelt i mock-modus), så dette fungerer
+uten tilgang til et ekte Databricks-warehouse. Bun laster `.env` automatisk.
 
 | Kommando | |
 |---|---|
@@ -57,21 +59,40 @@ Databricks-warehouse. Bun laster `.env` automatisk.
 ## Konfigurasjon
 
 ```bash
-DATABRICKS_HOST='******.cloud.databricks.com'
-DATABRICKS_HTTP_PATH='/sql/1.0/warehouses/****************'
-DATABRICKS_TOKEN='dapi********************************'
-DATABRICKS_TABLE='catalog.skjema.matrikkel_adresse'
+DATABRICKS_HOST='3359340685875444.4.gcp.databricks.com'
+DATABRICKS_HTTP_PATH='/sql/1.0/warehouses/7b7b34fd5e55d6f1'
+DATABRICKS_CLIENT_ID='****************'
+DATABRICKS_CLIENT_SECRET='****************'
+DATABRICKS_TABLE='matrikkel_adressesok_produkt'
 ES_URL='******rib-ap0210:9200'
 ES_API_KEY='****************'
 TZ=UTC
 ```
 
+`DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH` og `DATABRICKS_TABLE` er ikke
+hemmeligheter og står derfor i klartekst i [.skip/prod.yaml](.skip/prod.yaml)
+og [.skip/prodtest.yaml](.skip/prodtest.yaml) (prodtest leser samme tabell med
+`_prodtest`-suffiks: `matrikkel_adressesok_produkt_prodtest`).
+
+`DATABRICKS_CLIENT_ID`/`DATABRICKS_CLIENT_SECRET` er OAuth-legitimasjonen
+(client credentials / M2M) til en Databricks-service principal - opprettet
+via [Datamarkedsplass sin "kom i gang"-guide](https://datamarkedsplass.kartverket-intern.cloud/kom-i-gang).
+`@databricks/sql` henter selv access token fra
+`https://<DATABRICKS_HOST>/oidc/v1/token` og fornyer det automatisk når det
+utløper; scope er alltid `all-apis` for M2M-flyten, det er ikke
+konfigurerbart. Personal access token (`DATABRICKS_TOKEN`) er ikke lenger
+støttet.
+
 `ES_API_KEY` er valgfri - utelatt lokalt siden docker-compose-clusteret kjører
 uten sikkerhet (`xpack.security.enabled: false`), men påkrevd i produksjon.
 
 `DATABRICKS_MOCK=true` bytter Databricks-kilden ut med faste rader fra
-[dev/fixtures](dev/fixtures) - de fire variablene over trengs da ikke. Satt i
-`.env.example` for lokal bruk, skal ikke være satt i produksjon.
+[dev/fixtures](dev/fixtures) via en falsk `@databricks/sql`-klient (se
+[src/databricks.mock.ts](src/databricks.mock.ts)) - resten av kjeden
+(spørringsbygging, radtransformasjon, feillogging) er nøyaktig den samme
+koden som mot et ekte warehouse. De fem Databricks-variablene over leses og
+valideres fortsatt, men brukes ikke reelt i mock-modus; `bun run start:mock`
+setter derfor harmløse placeholder-verdier for dem automatisk.
 
 `INDEX_SUFFIX` legges til alias- og indeksnavnet (f.eks. `-prodtest`), slik at
 jobben kan kjøre mot samme ES-cluster fra flere miljøer uten at de overskriver
@@ -80,6 +101,37 @@ hverandres indekser/alias. Ubrukt i prod.
 Feltnavn og kodelister følger [produktspesifikasjon Matrikkelen-Adresse
 20200501](https://register.geonorge.no/data/documents/Produktspesifikasjoner_matrikkelen-adresse_v2_produktspesifikasjon-matrikkelen-adresse-20200501_.pdf).
 `atkomstpunkt` er modellert etter kodelista `TypeAtkomst` (kap. 5.1.2.17).
+
+## Datamodell
+
+Databricks-tabellen sender noen felt i et format som ikke kan lagres direkte
+i Elasticsearch, og `transform.ts` gjør derfor denne tolkningen før
+indeksering (se [src/schema.ts](src/schema.ts) for selve typene og
+[src/transform.ts](src/transform.ts) for logikken):
+
+- **Koordinater** (`representasjonspunkt` og `atkomstpunkt`) kommer som
+  JSON-objekt-strenger med lat/lon i UTM33N (EPSG:25833). De reprojiseres til
+  EPSG:4258 (grader) via [src/projection.ts](src/projection.ts) før de
+  lagres som `geo_point` - hovedappens søke-API (`adressesok`) forventer
+  koordinater i EPSG:4258. Feiler reprojeksjonen eller mangler koordinaten,
+  logges det en advarsel og punktet utelates i stedet for å lagre feil data.
+- **`bruksenhetsnummer`** kommer som en JSON-array-streng (f.eks.
+  `["H0101","H0102"]`, noen ganger med tomme strenger iblandet). Den tolkes
+  til en reell `string[]`, der tomme strenger filtreres bort, og matcher da
+  hovedappens `AddressDocument.bruksenhetsnummer`.
+- **`objtype`** kommer i lowercase (`"vegadresse"`/`"matrikkeladresse"`) og
+  normaliseres til hovedappens kapitaliserte form (`"Vegadresse"`/
+  `"Matrikkeladresse"`). Ukjente verdier logges som advarsel og lagres som
+  `null`.
+- **`adresseid`, `objid`, `kortnavn`, `seksjonsnummer`** lagres og
+  indekseres, men finnes ikke i hovedappens `AddressDocument` og eksponeres
+  derfor ikke av søke-APIet (`objid` ekskluderes allerede eksplisitt fra
+  `_source` i `search.ts`/`point-search.ts`).
+- **`undernummer`** finnes ikke lenger i Databricks-tabellen og er fjernet
+  fra skjemaet.
+- **`adressekode`** er 100 % `null` i alle data vi har sett så langt - typen
+  er derfor fortsatt en lokal overstyring (`string | null`) av hovedappens
+  `number | null` inntil vi vet mer om den reelle typen.
 
 Retry, batching av bulk-kall og ny-forsøk på 429-avviste dokumenter kommer
 fra `@elastic/elasticsearch`. Strømming med konstant minnebruk kommer fra
@@ -90,11 +142,12 @@ fra `@elastic/elasticsearch`. Strømming med konstant minnebruk kommer fra
 
 `bun run compose:up` gir Elasticsearch på 9201. Det kobles ikke mot noe
 ekte Databricks-warehouse lokalt - kjør med `DATABRICKS_MOCK=true` (satt i
-`.env.example`), så leser jobben i stedet 1 079 faste rader fra
+`.env.example`), så leser jobben i stedet 1 083 faste rader fra
 [dev/fixtures/matrikkel_adresse.json](dev/fixtures/matrikkel_adresse.json),
 nok til å passere `MIN_DOCS`-sjekken i [check.ts](src/check.ts). Fixturen
 inneholder begge adressetyper og noen vrange rader (manglende `lokalid`,
-manglende koordinater, begge atkomstpunkt-variantene) for å øve på
+manglende koordinater, begge atkomstpunkt-variantene, et
+`bruksenhetsnummer` med tom streng iblandet) for å øve på
 feilhåndteringen.
 
 På Apple Silicon med en x86_64 Docker-VM faller Elasticsearch-JVM-en ofte
@@ -141,8 +194,8 @@ Jobben kjører som en periodisk `SKIPJob` i to miljøer, se
 [.skip/prodtest.yaml](.skip/prodtest.yaml) (hver time, `INDEX_SUFFIX=-prodtest`
 så den ikke rører prod sitt alias/indekser) og [SKIP sin dokumentasjon om
 jobber](https://skip.kartverket.no/docs/jobber-skip). Hemmeligheter
-(`DATABRICKS_TOKEN` m.fl.) kommer inn via `envFrom`/secret, ikke som literal
-`env` i manifestet.
+(`DATABRICKS_CLIENT_SECRET` m.fl.) kommer inn via `envFrom`/secret, ikke som
+literal `env` i manifestet.
 
 For å trigge en kjøring manuelt (uten å vente til neste cron-tidspunkt): gå
 inn i Argo CD, finn CronJob-ressursen, kebab-meny → "Create Job". Det kjører

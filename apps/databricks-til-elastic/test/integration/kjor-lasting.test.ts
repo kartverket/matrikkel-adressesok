@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, it } from "bun:test";
 
 process.env.DATABRICKS_MOCK = "true";
+// Brukes ikke reelt i mock-modus, men createDatabricksSource() validerer at
+// de er satt før den kobler til (se databricks.ts).
+process.env.DATABRICKS_HOST ??= "mock.gcp.databricks.com";
+process.env.DATABRICKS_HTTP_PATH ??= "/sql/1.0/warehouses/mock";
+process.env.DATABRICKS_CLIENT_ID ??= "mock-client-id";
+process.env.DATABRICKS_CLIENT_SECRET ??= "mock-client-secret";
+process.env.DATABRICKS_TABLE ??= "mock_matrikkel_adresse";
 process.env.ES_URL ??= "http://localhost:9201";
 process.env.INDEX_SUFFIX = `-test-${Date.now()}`;
 
