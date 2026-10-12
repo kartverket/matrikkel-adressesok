@@ -1,0 +1,20 @@
+# Gir databricks-compute-service-kontoen riktige rettigheter i Databricks via
+# Dataplattformens IaC-API. Se kom-i-gang-guiden:
+# https://datamarkedsplass.kartverket-intern.cloud/kom-i-gang
+# og malen: https://github.com/kartverket/dask-datamarkedsplass/blob/main/.github/workflows/call-dataplatform-iac-api.md
+name: databricks-til-elastic - Grant Databricks access
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-dataplatform-iac-api:
+    permissions:
+      id-token: write
+    uses: kartverket/dask-datamarkedsplass/.github/workflows/call-dataplatform-iac-api.yml@main
+    with:
+      endpoint: service-principals
+      body: '{ "gsm_secret_name": "projects/367207507054/secrets/databricks-to-elastic-databricks-client-secret", "name": "matrikkelen-adressesok-to-elastic" }'
+      service_account: matrikkelen-adrs-deploy@matrikkelen-adrs-prod-479d.iam.gserviceaccount.com
+      auth_project_number: "486589934555"
+    secrets: inherit
