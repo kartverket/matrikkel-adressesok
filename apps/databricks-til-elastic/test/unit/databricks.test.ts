@@ -36,7 +36,7 @@ const BASE: DatabricksRow = {
   adressenavn: "Storgata",
   nummer: 1,
   atkomstpunkt: null,
-  representasjonspunkt: JSON.stringify({ lat: 6649017.75, lon: 262409.73 }),
+  representasjonspunkt: JSON.stringify({ lat: 59.91, lon: 10.75 }),
 };
 
 /**
@@ -119,15 +119,17 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
           host: "test-workspace.gcp.databricks.com",
           path: "/sql/1.0/warehouses/testwarehouse",
           authType: "databricks-oauth",
+          oauthScopes: ["all-apis"],
           oauthClientId: "test-client-id",
           oauthClientSecret: "test-client-secret",
         },
       ]);
 
-      // Spørringen henter nøyaktig COLUMNS fra riktig tabell.
+      // Spørringen henter nøyaktig COLUMNS fra riktig tabell, med hvert ledd
+      // av katalog.skjema.tabell backtick-kvotert hver for seg.
       const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
       expect(spy.executeStatementCalls).toEqual([
-        `select ${expectedSelect} from catalog.skjema.matrikkel_adresse`,
+        `select ${expectedSelect} from \`catalog\`.\`skjema\`.\`matrikkel_adresse\``,
       ]);
       expect(spy.iterateRowsCalls).toEqual([{ maxRows: ROWS_PER_BATCH_FROM_DATABRICKS }]);
 
@@ -161,6 +163,22 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
 
     expect(spy.executeStatementCalls).toHaveLength(0);
     expect(spy.connectCalls).toHaveLength(0);
+
+    process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";
+  });
+
+  it("godtar katalognavn med bindestrek (Unity Catalog), hvert ledd backtick-kvotert", async () => {
+    const spy = createSpyClient([BASE]);
+    const source = createDatabricksSource(() => spy.client);
+    process.env.DATABRICKS_TABLE =
+      "eiendom_matrikkelen-adresse.3_gold_schema.matrikkel_adressesok_produkt_gold";
+
+    await drain(source.documents(TS));
+
+    const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
+    expect(spy.executeStatementCalls).toEqual([
+      `select ${expectedSelect} from \`eiendom_matrikkelen-adresse\`.\`3_gold_schema\`.\`matrikkel_adressesok_produkt_gold\``,
+    ]);
 
     process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";
   });

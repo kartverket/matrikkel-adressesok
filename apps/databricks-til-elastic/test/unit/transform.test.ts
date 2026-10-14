@@ -4,10 +4,10 @@ import { rowToDocument } from "../../src/transform";
 
 const TS = "2026-09-02T10:00:00.000Z";
 
-// UTM33N (EPSG:25833), slik Databricks leverer koordinatene. Tilsvarer ca.
-// 10.75°Ø/59.91°N i EPSG:4258 etter reprojeksjon.
-const UTM_LON = 262409.73;
-const UTM_LAT = 6649017.75;
+// EPSG:4258 (grader), slik Databricks leverer koordinatene - ca. Oslo
+// sentrum.
+const LON = 10.75;
+const LAT = 59.91;
 
 const BASE: DatabricksRow = {
   lokalid: 12345,
@@ -34,7 +34,7 @@ const BASE: DatabricksRow = {
   adressenavn: "Storgata",
   nummer: 1,
   atkomstpunkt: null,
-  representasjonspunkt: JSON.stringify({ lat: UTM_LAT, lon: UTM_LON }),
+  representasjonspunkt: JSON.stringify({ lat: LAT, lon: LON }),
 };
 
 const row = (overrides: Partial<DatabricksRow> = {}): DatabricksRow => ({ ...BASE, ...overrides });
@@ -46,10 +46,10 @@ function rowToDocumentExpectedNotNull(row: DatabricksRow, timestamp: string) {
 }
 
 describe("rowToDocument", () => {
-  it("tolker representasjonspunkt-JSON-en og reprojiserer fra UTM33N til grader", () => {
+  it("tolker representasjonspunkt-JSON-en uten reprojeksjon (allerede EPSG:4258)", () => {
     const doc = rowToDocumentExpectedNotNull(row(), TS);
-    expect(doc.representasjonspunkt?.lat).toBeCloseTo(59.91, 5);
-    expect(doc.representasjonspunkt?.lon).toBeCloseTo(10.75, 5);
+    expect(doc.representasjonspunkt?.lat).toBe(LAT);
+    expect(doc.representasjonspunkt?.lon).toBe(LON);
   });
 
   it("utelater punktet når representasjonspunkt mangler eller ikke lar seg tolke", () => {
@@ -62,27 +62,27 @@ describe("rowToDocument", () => {
     ).toBeNull();
     expect(
       rowToDocumentExpectedNotNull(
-        row({ representasjonspunkt: JSON.stringify({ lat: null, lon: UTM_LON }) }),
+        row({ representasjonspunkt: JSON.stringify({ lat: null, lon: LON }) }),
         TS,
       ).representasjonspunkt,
     ).toBeNull();
   });
 
-  it("tolker atkomstpunkt med sommer/vinter/generell-varianter og reprojiserer hver for seg", () => {
+  it("tolker atkomstpunkt med sommer/vinter/generell-varianter uten reprojeksjon", () => {
     const doc = rowToDocumentExpectedNotNull(
       row({
         atkomstpunkt: JSON.stringify({
           sommer: null,
           vinter: null,
-          generell: { lat: UTM_LAT, lon: UTM_LON },
+          generell: { lat: LAT, lon: LON },
         }),
       }),
       TS,
     );
     expect(doc.atkomstpunkt?.sommer).toBeNull();
     expect(doc.atkomstpunkt?.vinter).toBeNull();
-    expect(doc.atkomstpunkt?.generell?.lat).toBeCloseTo(59.91, 5);
-    expect(doc.atkomstpunkt?.generell?.lon).toBeCloseTo(10.75, 5);
+    expect(doc.atkomstpunkt?.generell?.lat).toBe(LAT);
+    expect(doc.atkomstpunkt?.generell?.lon).toBe(LON);
   });
 
   it("setter atkomstpunkt til null når feltet mangler", () => {

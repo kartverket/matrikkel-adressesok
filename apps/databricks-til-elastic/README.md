@@ -23,9 +23,8 @@ som vellykket siden aliaset allerede peker riktig.
 
 Jobben gjør noe massering av dataene underveis, utover det rene
 "velg ut og send videre": `transform.ts` tolker Databricks sine JSON-strenger
-for `representasjonspunkt`/`atkomstpunkt`/`bruksenhetsnummer`, reprojiserer
-koordinatene til EPSG:4258 og normaliserer `objtype` til hovedappens
-kapitaliserte form - se "Datamodell" under.
+for `representasjonspunkt`/`atkomstpunkt`/`bruksenhetsnummer` og normaliserer
+`objtype` til hovedappens kapitaliserte form - se "Datamodell" under.
 
 ## Kjøring
 
@@ -110,11 +109,10 @@ indeksering (se [src/schema.ts](src/schema.ts) for selve typene og
 [src/transform.ts](src/transform.ts) for logikken):
 
 - **Koordinater** (`representasjonspunkt` og `atkomstpunkt`) kommer som
-  JSON-objekt-strenger med lat/lon i UTM33N (EPSG:25833). De reprojiseres til
-  EPSG:4258 (grader) via [src/projection.ts](src/projection.ts) før de
-  lagres som `geo_point` - hovedappens søke-API (`adressesok`) forventer
-  koordinater i EPSG:4258. Feiler reprojeksjonen eller mangler koordinaten,
-  logges det en advarsel og punktet utelates i stedet for å lagre feil data.
+  JSON-objekt-strenger med lat/lon allerede i EPSG:4258 (grader) - samme SRID
+  som hovedappens søke-API (`adressesok`) forventer, så de lagres uendret som
+  `geo_point`. Mangler koordinaten, utelates punktet i stedet for å lagre
+  feil data.
 - **`bruksenhetsnummer`** kommer som en JSON-array-streng (f.eks.
   `["H0101","H0102"]`, noen ganger med tomme strenger iblandet). Den tolkes
   til en reell `string[]`, der tomme strenger filtreres bort, og matcher da

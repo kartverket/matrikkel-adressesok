@@ -2,8 +2,8 @@ import type { estypes } from "@elastic/elasticsearch";
 import type { AddressDocument as HovedappensAddressDocument } from "@matrikkel/shared-schema";
 
 /**
- * Et punkt slik Databricks sender det: JSON-objekt med lat/lon i kilde-SRID
- * (UTM33N/EPSG:25833), se `src/projection.ts`.
+ * Et punkt slik Databricks sender det: JSON-objekt med lat/lon allerede i
+ * EPSG:4258 (grader) - samme SRID som hovedappen forventer.
  */
 export interface DatabricksPoint {
   lat: number;

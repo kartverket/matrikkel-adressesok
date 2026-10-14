@@ -1,5 +1,4 @@
 import { logger } from "./logger";
-import { reprojectToTargetSrid } from "./projection";
 import type {
   AddressDocument,
   DatabricksAtkomstpunkt,
@@ -23,8 +22,8 @@ export function rowToDocument(row: DatabricksRow, timestamp: string): AddressDoc
     adresseid: row.adresseid == null ? null : String(row.adresseid),
     objtype: normaliserObjtype(objtype, row.lokalid),
     bruksenhetsnummer: parseBruksenhetsnummer(bruksenhetsnummer, row.lokalid),
-    representasjonspunkt: reprojectJsonPoint(representasjonspunkt, row.lokalid),
-    atkomstpunkt: reprojectAtkomstpunkt(atkomstpunkt, row.lokalid),
+    representasjonspunkt: parseJsonPoint(representasjonspunkt, row.lokalid),
+    atkomstpunkt: parseAtkomstpunkt(atkomstpunkt, row.lokalid),
     "@version": "2",
     "@timestamp": timestamp,
   };
@@ -67,35 +66,26 @@ function parseBruksenhetsnummer(
 }
 
 /**
- * `representasjonspunkt` kommer som en JSON-objekt-streng med koordinater i
- * UTM33N (EPSG:25833). Reprojiseres til EPSG:4258 (grader) før indeksering -
- * se projection.ts. geo_point-mappingen avviser halve/manglende punkt, så
- * hele feltet blir null hvis noe mangler eller ikke lar seg tolke.
+ * `representasjonspunkt` kommer som en JSON-objekt-streng med koordinater
+ * allerede i EPSG:4258 (grader), samme SRID som hovedappen forventer - ingen
+ * reprojeksjon nødvendig. geo_point-mappingen avviser halve/manglende punkt,
+ * så hele feltet blir null hvis noe mangler eller ikke lar seg tolke.
  */
-function reprojectJsonPoint(
+function parseJsonPoint(
   value: string | null,
   lokalid: string | number | null,
 ): { lat: number; lon: number } | null {
   const point = parseJson<DatabricksPoint>(value, lokalid, "representasjonspunkt");
   if (!point || point.lat == null || point.lon == null) return null;
-
-  const reprojected = reprojectToTargetSrid(point.lat, point.lon);
-  if (!reprojected) {
-    logger.warn(
-      { lokalid, lat: point.lat, lon: point.lon },
-      "klarte ikke reprojisere representasjonspunkt",
-    );
-    return null;
-  }
-  return reprojected;
+  return { lat: point.lat, lon: point.lon };
 }
 
 /**
  * `atkomstpunkt` er nesten alltid null i praksis, men når den er satt
  * inneholder den opptil tre varianter (sommer/vinter/generell) av samme
- * adkomstpunkt, hver i samme kilde-SRID som `representasjonspunkt`.
+ * adkomstpunkt, hver i samme SRID (EPSG:4258) som `representasjonspunkt`.
  */
-function reprojectAtkomstpunkt(
+function parseAtkomstpunkt(
   value: string | null,
   lokalid: string | number | null,
 ): DatabricksAtkomstpunkt | null {
@@ -106,30 +96,16 @@ function reprojectAtkomstpunkt(
   }>(value, lokalid, "atkomstpunkt");
   if (!atkomstpunkt) return null;
 
-  const reprojectVariant = (point: DatabricksPoint | null | undefined) =>
-    point == null ? null : reprojectJsonPointValue(point, lokalid);
+  const normalizeVariant = (point: DatabricksPoint | null | undefined) =>
+    point == null || point.lat == null || point.lon == null
+      ? null
+      : { lat: point.lat, lon: point.lon };
 
   return {
-    sommer: reprojectVariant(atkomstpunkt.sommer),
-    vinter: reprojectVariant(atkomstpunkt.vinter),
-    generell: reprojectVariant(atkomstpunkt.generell),
+    sommer: normalizeVariant(atkomstpunkt.sommer),
+    vinter: normalizeVariant(atkomstpunkt.vinter),
+    generell: normalizeVariant(atkomstpunkt.generell),
   };
-}
-
-function reprojectJsonPointValue(
-  point: DatabricksPoint,
-  lokalid: string | number | null,
-): DatabricksPoint | null {
-  if (point.lat == null || point.lon == null) return null;
-  const reprojected = reprojectToTargetSrid(point.lat, point.lon);
-  if (!reprojected) {
-    logger.warn(
-      { lokalid, lat: point.lat, lon: point.lon },
-      "klarte ikke reprojisere punkt i atkomstpunkt",
-    );
-    return null;
-  }
-  return reprojected;
 }
 
 function parseJson<T>(
