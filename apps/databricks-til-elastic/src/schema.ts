@@ -1,59 +1,45 @@
 import type { estypes } from "@elastic/elasticsearch";
-import type { AddressDocument as HovedappensAddressDocument } from "@matrikkel/shared-schema";
-
-/**
- * Et punkt slik Databricks sender det: JSON-objekt med lat/lon allerede i
- * EPSG:4258 (grader) - samme SRID som hovedappen forventer.
- */
-export interface DatabricksPoint {
-  lat: number;
-  lon: number;
-}
-
-/**
- * `atkomstpunkt` modellert etter kodelista `TypeAtkomst` (produktspek.
- * kap. 5.1.2.17) - sommer/vinter/generell-varianter av samme adkomstpunkt.
- * Nesten alltid null i praksis.
- */
-export interface DatabricksAtkomstpunkt {
-  sommer: DatabricksPoint | null;
-  vinter: DatabricksPoint | null;
-  generell: DatabricksPoint | null;
-}
+import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
 
 /**
  * Raden slik den kommer fra Databricks-tabellen. Én flat tabell dekker
  * både vegadresse og matrikkeladresse.
+ *
+ * Feltnavn og -typer følger datakontrakten (`matrikkel_adressesok_produkt_gold`,
+ * id `7bf75945-6f2b-4f62-bfda-d6e52ba81c2d`, kontraktet
+ * `eiendom_matrikkelen-adresse.3_gold_schema`) rått - ingen oversettelse til
+ * hovedappens eldre feltnavn skjer her. Den oversettelsen (f.eks.
+ * `uuid`→`lokalid`, `adressetype`→`objtype`) gjøres i stedet av søke-APIet
+ * (`adressesok`) for å unngå et samtidig brudd der.
+ *
+ * `representasjonspunkt`/`atkomstpunkt`/`bruksenhetsnummer` valideres
+ * ved mapping i `transform.ts`, slik at ugyldige kildeverdier stopper lastingen.
  */
 export interface DatabricksRow {
-  lokalid: string | number | null;
-  adresseid: string | number | null;
-  objid: string | null;
-  objtype: "vegadresse" | "matrikkeladresse" | null;
+  uuid: string | null;
+  adresse_id: number | null;
+  adressetype: string | null;
   oppdateringsdato: string | null;
+  adressetekst: string | null;
+  adressetekstutenadressetilleggsnavn: string | null;
+  adressenavn: string | null;
   adressetilleggsnavn: string | null;
   kortnavn: string | null;
+  adressekode: string | null;
+  nummer: number | null;
+  bokstav: string | null;
+  bruksenhetsnummer: unknown;
   kommunenavn: string | null;
+  kommunenummer: string | null;
   postnummer: string | null;
   poststed: string | null;
-  adresse_kommunenummer: string | null;
   gardsnummer: number | null;
   bruksnummer: number | null;
   festenummer: number | null;
   seksjonsnummer: number | null;
-  stedfestingverifisert: boolean | null;
-  adressetekst: string | null;
-  adressetekstutenadressetilleggsnavn: string | null;
-  /** JSON-array som streng fra Databricks, f.eks. `["H0101","H0102"]`. */
-  bruksenhetsnummer: string | null;
-  adressekode: string | null;
-  bokstav: string | null;
-  adressenavn: string | null;
-  nummer: number | null;
-  /** JSON-objekt som streng fra Databricks, se `DatabricksAtkomstpunkt`. */
-  atkomstpunkt: string | null;
-  /** JSON-objekt som streng fra Databricks, se `DatabricksPoint`. */
-  representasjonspunkt: string | null;
+  representasjonspunkt: unknown;
+  representasjonspunkt_stedfesting_verifisert: boolean | null;
+  atkomstpunkt: unknown;
 }
 
 /**
@@ -62,57 +48,42 @@ export interface DatabricksRow {
  * kolonne feiler på kompileringstidspunktet.
  */
 export const COLUMNS: ReadonlyArray<keyof DatabricksRow> = [
-  "lokalid",
-  "adresseid",
-  "objid",
-  "objtype",
+  "uuid",
+  "adresse_id",
+  "adressetype",
   "oppdateringsdato",
+  "adressetekst",
+  "adressetekstutenadressetilleggsnavn",
+  "adressenavn",
   "adressetilleggsnavn",
   "kortnavn",
+  "adressekode",
+  "nummer",
+  "bokstav",
+  "bruksenhetsnummer",
   "kommunenavn",
+  "kommunenummer",
   "postnummer",
   "poststed",
-  "adresse_kommunenummer",
   "gardsnummer",
   "bruksnummer",
   "festenummer",
   "seksjonsnummer",
-  "stedfestingverifisert",
-  "adressetekst",
-  "adressetekstutenadressetilleggsnavn",
-  "bruksenhetsnummer",
-  "adressekode",
-  "bokstav",
-  "adressenavn",
-  "nummer",
-  "atkomstpunkt",
   "representasjonspunkt",
+  "representasjonspunkt_stedfesting_verifisert",
+  "atkomstpunkt",
 ];
 
 /**
- * Dokumentet slik det ligger i Elasticsearch - hovedappens `AddressDocument`
- * pluss feltene jobben selv trenger for indeksering. Speiler `MAPPING`
+ * Dokumentet slik det ligger i Elasticsearch. Dette *er* modellen som
+ * publiseres - selve definisjonen (`ElasticAddressDocumentSchema`) ligger i
+ * `@matrikkel/shared-schema` slik at `adressesok` (søke-APIet) kan ta den i
+ * bruk direkte når den migrerer bort fra sin eldre `AddressDocument`
+ * (`lokalid`, `objtype`, `adresse_kommunenummer`, `stedfestingverifisert`,
+ * ...) - inntil da lever de to modellene side om side. Speiler `MAPPING`
  * under. `transform.ts` er eneste sted som bygger disse.
- *
- * `adresseid`, `objid`, `kortnavn`, `seksjonsnummer` og `atkomstpunkt`
- * finnes ikke i hovedappens `AddressDocument` - de lagres og indekseres,
- * men hovedappens søke-API eksponerer dem ikke (`objid` ekskluderes
- * allerede eksplisitt fra `_source` i search.ts/point-search.ts).
- *
- * `adressekode` overstyrer hovedappens type inntil videre: 100% null i alle
- * data vi har sett så langt, så den reelle typen er ukjent.
  */
-export interface AddressDocument extends Omit<HovedappensAddressDocument, "adressekode"> {
-  lokalid: string;
-  adresseid: string | null;
-  objid: string | null;
-  kortnavn: string | null;
-  seksjonsnummer: number | null;
-  atkomstpunkt: DatabricksAtkomstpunkt | null;
-  adressekode: string | null;
-  "@version": string;
-  "@timestamp": string;
-}
+export type AddressDocument = ElasticAddressDocument;
 
 const tekst: estypes.MappingProperty = {
   type: "text",
@@ -138,14 +109,12 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
     properties: {
       "@timestamp": { type: "date" },
       "@version": { type: "keyword" },
-      lokalid: { type: "keyword" },
-      adresseid: { type: "keyword" },
-      objid: { type: "keyword" },
-      objtype: { type: "keyword" },
+      uuid: { type: "keyword" },
+      adresse_id: { type: "keyword" },
+      adressetype: { type: "keyword" },
       oppdateringsdato: {
         type: "date",
-        // Databricks sender "yyyy-MM-dd HH:mm:ss.SSS" (mellomrom, ikke "T").
-        // Ingen transformasjon av verdien - mappingen må godta rå-formatet.
+        // Godtar både ISO-tidspunkter og Databricks-format med mellomrom.
         format: "yyyy-MM-dd HH:mm:ss.SSS||strict_date_optional_time||epoch_millis",
       },
       representasjonspunkt: { type: "geo_point" },
@@ -164,7 +133,7 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
       kommunenavn: tekst,
       poststed: tekst,
       postnummer: { type: "keyword" },
-      adresse_kommunenummer: { type: "keyword" },
+      kommunenummer: { type: "keyword" },
       adressekode: { type: "keyword" },
       bokstav: { type: "keyword" },
       bruksenhetsnummer: { type: "keyword" },
@@ -173,7 +142,7 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
       bruksnummer: { type: "integer" },
       festenummer: { type: "integer" },
       nummer: { type: "integer" },
-      stedfestingverifisert: { type: "boolean" },
+      representasjonspunkt_stedfesting_verifisert: { type: "boolean" },
     },
   },
 };

@@ -1,4 +1,5 @@
 import { assertHealthy, relativeDeviationPercent } from "./check";
+import { getRequiredEnvVar, PROGRESS_LOG_PERCENT_STEP } from "./config";
 import { createDatabricksSource } from "./databricks";
 import { createFakeDatabricksClient } from "./databricks.mock";
 import {
@@ -13,6 +14,8 @@ import {
   swapAliasAtomically,
 } from "./elastic";
 import { logger } from "./logger";
+import type { AddressDocument, DatabricksRow } from "./schema";
+import { rowToDocument } from "./transform";
 
 const source =
   process.env.DATABRICKS_MOCK === "true"
@@ -27,8 +30,11 @@ export async function runLoad(): Promise<void> {
   const previousIndicesWithAlias = await indicesWithAlias();
   logger.info({ newIndex, previousIndicesWithAlias }, "starter");
 
+  const totalRows = await source.countRows();
+  logger.info({ table: getRequiredEnvVar("DATABRICKS_TABLE"), totalRows }, "antall rader å hente");
   await createIndex(newIndex);
-  const bulkStats = await loadDocumentStream(newIndex, source.documents(timestamp));
+  const documents = transformRowsWithProgress(source.rows(), timestamp, totalRows);
+  const bulkStats = await loadDocumentStream(newIndex, documents);
   logger.info(
     {
       documentsAccepted: bulkStats.successful,
@@ -83,4 +89,42 @@ export async function closeClients(): Promise<void> {
   await es
     .close()
     .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke ES-klienten"));
+}
+
+async function* transformRowsWithProgress(
+  rows: AsyncIterable<DatabricksRow>,
+  timestamp: string,
+  totalRows: number,
+): AsyncGenerator<AddressDocument> {
+  const table = getRequiredEnvVar("DATABRICKS_TABLE");
+  let rowsRead = 0;
+  let lastLoggedPercent = 0;
+
+  for await (const row of rows) {
+    rowsRead++;
+    lastLoggedPercent = logProgress(table, rowsRead, totalRows, lastLoggedPercent);
+
+    yield rowToDocument(row, timestamp);
+  }
+
+  if (rowsRead !== totalRows) {
+    throw new Error(`Leste ${rowsRead} rader fra ${table}, forventet ${totalRows}`);
+  }
+  logger.info({ table, rows: rowsRead, totalRows }, "tabell lest");
+}
+
+function logProgress(
+  table: string,
+  rowsRead: number,
+  totalRows: number,
+  lastLoggedPercent: number,
+): number {
+  if (totalRows === 0) return lastLoggedPercent;
+
+  const percent = Math.floor((rowsRead / totalRows) * 100);
+  const bucket = Math.floor(percent / PROGRESS_LOG_PERCENT_STEP) * PROGRESS_LOG_PERCENT_STEP;
+  if (bucket > lastLoggedPercent && percent < 100) {
+    logger.info({ table, rowsRead, totalRows, percent: bucket }, "leser fra Databricks");
+  }
+  return bucket;
 }

@@ -9,34 +9,31 @@ process.env.DATABRICKS_CLIENT_ID = "test-client-id";
 process.env.DATABRICKS_CLIENT_SECRET = "test-client-secret";
 process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";
 
-const TS = "2026-09-02T10:00:00.000Z";
-
 const BASE: DatabricksRow = {
-  lokalid: 12345,
-  adresseid: 98765,
-  objid: "obj-98765",
-  objtype: "vegadresse",
-  oppdateringsdato: "2024-05-01 12:34:56.789",
+  uuid: "12345",
+  adresse_id: 98765,
+  adressetype: "Vegadresse",
+  oppdateringsdato: "2024-05-01T12:34:56.789Z",
   adressetilleggsnavn: null,
   kortnavn: "Storgata",
   kommunenavn: "Oslo",
   postnummer: "0155",
   poststed: "OSLO",
-  adresse_kommunenummer: "0301",
+  kommunenummer: "0301",
   gardsnummer: null,
   bruksnummer: null,
   festenummer: null,
   seksjonsnummer: 0,
-  stedfestingverifisert: true,
+  representasjonspunkt_stedfesting_verifisert: true,
   adressetekst: "Storgata 1",
   adressetekstutenadressetilleggsnavn: "Storgata 1",
-  bruksenhetsnummer: `["H0101","H0102"]`,
+  bruksenhetsnummer: ["H0101", "H0102"],
   adressekode: null,
   bokstav: null,
   adressenavn: "Storgata",
   nummer: 1,
   atkomstpunkt: null,
-  representasjonspunkt: JSON.stringify({ lat: 59.91, lon: 10.75 }),
+  representasjonspunkt: { lat: 59.91, lon: 10.75 },
 };
 
 /**
@@ -45,7 +42,10 @@ const BASE: DatabricksRow = {
  * (autentisering, SQL-bygging, rad-iterering og opprydding) uten et ekte
  * Databricks-warehouse.
  */
-function createSpyClient(rowsToYield: DatabricksRow[]) {
+function createSpyClient(
+  rowsToYield: DatabricksRow[],
+  countRows: object[] = [{ total: rowsToYield.length }],
+) {
   const connectCalls: unknown[] = [];
   const executeStatementCalls: string[] = [];
   const iterateRowsCalls: Array<{ maxRows?: number }> = [];
@@ -61,11 +61,13 @@ function createSpyClient(rowsToYield: DatabricksRow[]) {
           return {
             executeStatement: async (query: string) => {
               executeStatementCalls.push(query);
+              const isCountQuery = query.startsWith("select count(*)");
+              const rows: object[] = isCountQuery ? countRows : rowsToYield;
               return {
                 iterateRows: (opts: { maxRows?: number }) => {
                   iterateRowsCalls.push(opts);
                   return (async function* () {
-                    for (const row of rowsToYield) yield row;
+                    for (const row of rows) yield row;
                   })();
                 },
                 close: async () => {
@@ -103,14 +105,39 @@ async function drain<T>(generator: AsyncGenerator<T>): Promise<T[]> {
 }
 
 describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", () => {
+  it("godtar antall som streng fra Databricks", async () => {
+    const spy = createSpyClient([BASE], [{ total: "1" }]);
+    const source = createDatabricksSource(() => spy.client);
+    expect(await source.countRows()).toBe(1);
+    await source.close();
+  });
+
+  it("feiler når tellingen ikke gir et gyldig antall, og lukker operasjonen", async () => {
+    for (const result of [
+      [],
+      [{ total: null }],
+      [{ total: "" }],
+      [{ total: -1 }],
+      [{ total: 1.5 }],
+      [{ total: "9007199254740992" }],
+    ]) {
+      const spy = createSpyClient([BASE], result);
+      const source = createDatabricksSource(() => spy.client);
+      await expect(source.countRows()).rejects.toThrow(/antall rader/);
+      expect(spy.operationCloseCalls()).toBe(1);
+      await source.close();
+    }
+  });
+
   it(
-    "kobler til med OAuth service principal, bygger spørringen, transformerer rader, " +
+    "kobler til med OAuth service principal, bygger spørringene og leser rader, " +
       "gjenbruker tilkoblingen og lukkes korrekt ved avslutning",
     async () => {
-      const spy = createSpyClient([BASE, { ...BASE, lokalid: null }]);
+      const spy = createSpyClient([BASE, { ...BASE, uuid: null }]);
       const source = createDatabricksSource(() => spy.client);
 
-      const firstRun = await drain(source.documents(TS));
+      expect(await source.countRows()).toBe(2);
+      const firstRun = await drain(source.rows());
 
       // Autentisering: OAuth client-credentials med service principal - ikke
       // personal access token.
@@ -125,27 +152,32 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
         },
       ]);
 
-      // Spørringen henter nøyaktig COLUMNS fra riktig tabell, med hvert ledd
-      // av katalog.skjema.tabell backtick-kvotert hver for seg.
+      // Count the table, then select its configured columns.
       const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
+      const expectedTable = "`catalog`.`skjema`.`matrikkel_adresse`";
       expect(spy.executeStatementCalls).toEqual([
-        `select ${expectedSelect} from \`catalog\`.\`skjema\`.\`matrikkel_adresse\``,
+        `select count(*) as total from ${expectedTable}`,
+        `select ${expectedSelect} from ${expectedTable}`,
       ]);
-      expect(spy.iterateRowsCalls).toEqual([{ maxRows: ROWS_PER_BATCH_FROM_DATABRICKS }]);
+      expect(spy.iterateRowsCalls).toEqual([
+        { maxRows: 1 },
+        { maxRows: ROWS_PER_BATCH_FROM_DATABRICKS },
+      ]);
 
-      // Rader transformeres via rowToDocument; raden uten lokalid hoppes over.
-      expect(firstRun).toHaveLength(1);
-      expect(firstRun[0]?.lokalid).toBe("12345");
+      expect(firstRun).toHaveLength(2);
+      expect(firstRun[0]?.uuid).toBe("12345");
+      expect(firstRun[1]?.uuid).toBeNull();
 
-      // Operasjonen lukkes etter kjøringen.
-      expect(spy.operationCloseCalls()).toBe(1);
+      // Begge operasjonene (count og select) lukkes etter kjøringen.
+      expect(spy.operationCloseCalls()).toBe(2);
 
       // Andre kjøring skal gjenbruke samme tilkobling - ikke koble til på nytt.
-      const secondRun = await drain(source.documents(TS));
-      expect(secondRun).toHaveLength(1);
+      expect(await source.countRows()).toBe(2);
+      const secondRun = await drain(source.rows());
+      expect(secondRun).toHaveLength(2);
       expect(spy.connectCalls).toHaveLength(1);
-      expect(spy.executeStatementCalls).toHaveLength(2);
-      expect(spy.operationCloseCalls()).toBe(2);
+      expect(spy.executeStatementCalls).toHaveLength(4);
+      expect(spy.operationCloseCalls()).toBe(4);
 
       // Avslutning: close() skal lukke både session og klient.
       await source.close();
@@ -159,7 +191,7 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
     const source = createDatabricksSource(() => spy.client);
     process.env.DATABRICKS_TABLE = "matrikkel_adresse; drop table x --";
 
-    await expect(drain(source.documents(TS))).rejects.toThrow(/Ugyldig DATABRICKS_TABLE/);
+    await expect(source.countRows()).rejects.toThrow(/Ugyldig DATABRICKS_TABLE/);
 
     expect(spy.executeStatementCalls).toHaveLength(0);
     expect(spy.connectCalls).toHaveLength(0);
@@ -173,11 +205,15 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
     process.env.DATABRICKS_TABLE =
       "eiendom_matrikkelen-adresse.3_gold_schema.matrikkel_adressesok_produkt_gold";
 
-    await drain(source.documents(TS));
+    await source.countRows();
+    await drain(source.rows());
 
     const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
+    const expectedTable =
+      "`eiendom_matrikkelen-adresse`.`3_gold_schema`.`matrikkel_adressesok_produkt_gold`";
     expect(spy.executeStatementCalls).toEqual([
-      `select ${expectedSelect} from \`eiendom_matrikkelen-adresse\`.\`3_gold_schema\`.\`matrikkel_adressesok_produkt_gold\``,
+      `select count(*) as total from ${expectedTable}`,
+      `select ${expectedSelect} from ${expectedTable}`,
     ]);
 
     process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";

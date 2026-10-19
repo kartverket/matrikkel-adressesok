@@ -3,7 +3,9 @@ const indexSuffixForEnvironmentIsolation = process.env.INDEX_SUFFIX ?? "";
 export const ALIAS = `ed_adressesok${indexSuffixForEnvironmentIsolation}`;
 export const INDEX_PREFIX = `ed_adressesok_v1${indexSuffixForEnvironmentIsolation}`;
 
-export const ROWS_PER_BATCH_FROM_DATABRICKS = 1000;
+export const ROWS_PER_BATCH_FROM_DATABRICKS = 20_000;
+export const PROGRESS_LOG_PERCENT_STEP = 5;
+
 export const NUMBER_OF_REPLICAS = 1;
 
 export const MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX = 10;

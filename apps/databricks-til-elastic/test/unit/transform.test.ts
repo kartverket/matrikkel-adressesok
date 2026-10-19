@@ -10,72 +10,76 @@ const LON = 10.75;
 const LAT = 59.91;
 
 const BASE: DatabricksRow = {
-  lokalid: 12345,
-  adresseid: 98765,
-  objid: "obj-98765",
-  objtype: "vegadresse",
-  oppdateringsdato: "2024-05-01 12:34:56.789",
+  uuid: "12345",
+  adresse_id: 98765,
+  adressetype: "Vegadresse",
+  oppdateringsdato: "2024-05-01T12:34:56.789Z",
   adressetilleggsnavn: null,
   kortnavn: "Storgata",
   kommunenavn: "Oslo",
   postnummer: "0155",
   poststed: "OSLO",
-  adresse_kommunenummer: "0301",
+  kommunenummer: "0301",
   gardsnummer: null,
   bruksnummer: null,
   festenummer: null,
   seksjonsnummer: 0,
-  stedfestingverifisert: true,
+  representasjonspunkt_stedfesting_verifisert: true,
   adressetekst: "Storgata 1",
   adressetekstutenadressetilleggsnavn: "Storgata 1",
-  bruksenhetsnummer: `["H0101","H0102"]`,
+  bruksenhetsnummer: ["H0101", "H0102"],
   adressekode: null,
   bokstav: null,
   adressenavn: "Storgata",
   nummer: 1,
   atkomstpunkt: null,
-  representasjonspunkt: JSON.stringify({ lat: LAT, lon: LON }),
+  representasjonspunkt: { lat: LAT, lon: LON },
 };
 
 const row = (overrides: Partial<DatabricksRow> = {}): DatabricksRow => ({ ...BASE, ...overrides });
 
-function rowToDocumentExpectedNotNull(row: DatabricksRow, timestamp: string) {
-  const doc = rowToDocument(row, timestamp);
-  if (doc === null) throw new Error("forventet dokument, fikk null");
-  return doc;
-}
-
 describe("rowToDocument", () => {
-  it("tolker representasjonspunkt-JSON-en uten reprojeksjon (allerede EPSG:4258)", () => {
-    const doc = rowToDocumentExpectedNotNull(row(), TS);
+  it("tolker representasjonspunkt uten reprojeksjon (allerede EPSG:4258)", () => {
+    const doc = rowToDocument(row(), TS);
     expect(doc.representasjonspunkt?.lat).toBe(LAT);
     expect(doc.representasjonspunkt?.lon).toBe(LON);
   });
 
-  it("utelater punktet når representasjonspunkt mangler eller ikke lar seg tolke", () => {
-    expect(
-      rowToDocumentExpectedNotNull(row({ representasjonspunkt: null }), TS).representasjonspunkt,
-    ).toBeNull();
-    expect(
-      rowToDocumentExpectedNotNull(row({ representasjonspunkt: "ikke json" }), TS)
-        .representasjonspunkt,
-    ).toBeNull();
-    expect(
-      rowToDocumentExpectedNotNull(
-        row({ representasjonspunkt: JSON.stringify({ lat: null, lon: LON }) }),
-        TS,
-      ).representasjonspunkt,
-    ).toBeNull();
+  it("beholder null når representasjonspunkt mangler", () => {
+    expect(rowToDocument(row({ representasjonspunkt: null }), TS).representasjonspunkt).toBeNull();
+  });
+
+  it("stopper ved ugyldige feltverdier i stedet for å indeksere null", () => {
+    for (const [felt, verdi] of [
+      ["representasjonspunkt", JSON.stringify({ lat: LAT, lon: LON })],
+      ["atkomstpunkt", JSON.stringify({ generell: { lat: LAT, lon: LON } })],
+      ["bruksenhetsnummer", JSON.stringify(["H0101"])],
+      ["atkomstpunkt", { generell: { lat: "ugyldig", lon: LON } }],
+      ["representasjonspunkt", { lat: null, lon: LON }],
+      ["representasjonspunkt", { lat: LAT }],
+      ["atkomstpunkt", { sommer: { lat: LAT, lon: null } }],
+      ["bruksenhetsnummer", [42]],
+    ] as const) {
+      expect(() => rowToDocument(row({ [felt]: verdi }), TS)).toThrow(
+        new RegExp(`Ugyldig dokument for uuid 12345:.*${felt}`, "s"),
+      );
+    }
+  });
+
+  it("stopper også ved ugyldige ordinære felt", () => {
+    expect(() => rowToDocument(Object.assign(row(), { postnummer: 1676 }), TS)).toThrow(
+      /Ugyldig dokument for uuid 12345:.*postnummer/s,
+    );
   });
 
   it("tolker atkomstpunkt med sommer/vinter/generell-varianter uten reprojeksjon", () => {
-    const doc = rowToDocumentExpectedNotNull(
+    const doc = rowToDocument(
       row({
-        atkomstpunkt: JSON.stringify({
+        atkomstpunkt: {
           sommer: null,
           vinter: null,
           generell: { lat: LAT, lon: LON },
-        }),
+        },
       }),
       TS,
     );
@@ -86,83 +90,65 @@ describe("rowToDocument", () => {
   });
 
   it("setter atkomstpunkt til null når feltet mangler", () => {
-    const doc = rowToDocumentExpectedNotNull(row({ atkomstpunkt: null }), TS);
+    const doc = rowToDocument(row({ atkomstpunkt: null }), TS);
     expect(doc.atkomstpunkt).toBeNull();
   });
 
-  it("normaliserer lowercase objtype til hovedappens kapitaliserte form", () => {
-    expect(rowToDocumentExpectedNotNull(row({ objtype: "vegadresse" }), TS).objtype).toBe(
-      "Vegadresse",
-    );
-    expect(rowToDocumentExpectedNotNull(row({ objtype: "matrikkeladresse" }), TS).objtype).toBe(
+  it("sender adressetype uendret videre", () => {
+    expect(rowToDocument(row({ adressetype: "Vegadresse" }), TS).adressetype).toBe("Vegadresse");
+    expect(rowToDocument(row({ adressetype: "Matrikkeladresse" }), TS).adressetype).toBe(
       "Matrikkeladresse",
     );
   });
 
-  it("setter objtype til null for ukjente verdier", () => {
-    const doc = rowToDocumentExpectedNotNull(
-      row({ objtype: "ukjent" as DatabricksRow["objtype"] }),
-      TS,
-    );
-    expect(doc.objtype).toBeNull();
-  });
-
-  it("tolker bruksenhetsnummer-JSON-arrayen og filtrerer bort tomme strenger", () => {
-    const doc = rowToDocumentExpectedNotNull(
-      row({ bruksenhetsnummer: `["","H0101","H0201"]` }),
-      TS,
-    );
+  it("tolker bruksenhetsnummer-arrayen og filtrerer bort tomme strenger", () => {
+    const doc = rowToDocument(row({ bruksenhetsnummer: ["", "H0101", "H0201"] }), TS);
     expect(doc.bruksenhetsnummer).toEqual(["H0101", "H0201"]);
   });
 
   it("setter bruksenhetsnummer til null når arrayen er tom eller mangler", () => {
-    expect(
-      rowToDocumentExpectedNotNull(row({ bruksenhetsnummer: `[""]` }), TS).bruksenhetsnummer,
-    ).toBeNull();
-    expect(
-      rowToDocumentExpectedNotNull(row({ bruksenhetsnummer: null }), TS).bruksenhetsnummer,
-    ).toBeNull();
+    expect(rowToDocument(row({ bruksenhetsnummer: [""] }), TS).bruksenhetsnummer).toBeNull();
+    expect(rowToDocument(row({ bruksenhetsnummer: null }), TS).bruksenhetsnummer).toBeNull();
   });
 
   it("sender oppdateringsdato uendret videre", () => {
-    const doc = rowToDocumentExpectedNotNull(row(), TS);
-    expect(doc.oppdateringsdato).toBe("2024-05-01 12:34:56.789");
+    const doc = rowToDocument(row(), TS);
+    expect(doc.oppdateringsdato).toBe("2024-05-01T12:34:56.789Z");
   });
 
   it("sender adressekode uendret videre", () => {
-    const doc = rowToDocumentExpectedNotNull(row({ adressekode: "00042" }), TS);
+    const doc = rowToDocument(row({ adressekode: "00042" }), TS);
     expect(doc.adressekode).toBe("00042");
   });
 
-  it("bruker lokalid og adresseid som streng", () => {
-    const doc = rowToDocumentExpectedNotNull(row({ lokalid: 42, adresseid: 7 }), TS);
-    expect(doc.lokalid).toBe("42");
-    expect(doc.adresseid).toBe("7");
+  it("bruker uuid uendret og adresse_id som streng", () => {
+    const doc = rowToDocument(row({ uuid: "42", adresse_id: 7 }), TS);
+    expect(doc.uuid).toBe("42");
+    expect(doc.adresse_id).toBe("7");
   });
 
-  it("setter adresseid til null når det mangler", () => {
-    const doc = rowToDocumentExpectedNotNull(row({ adresseid: null }), TS);
-    expect(doc.adresseid).toBeNull();
+  it("setter adresse_id til null når det mangler", () => {
+    const doc = rowToDocument(row({ adresse_id: null }), TS);
+    expect(doc.adresse_id).toBeNull();
   });
 
   it("setter @version og @timestamp", () => {
-    const doc = rowToDocumentExpectedNotNull(row(), TS);
+    const doc = rowToDocument(row(), TS);
     expect(doc["@version"]).toBe("2");
     expect(doc["@timestamp"]).toBe(TS);
   });
 
-  it("returnerer null for rader uten lokalid", () => {
-    expect(rowToDocument(row({ lokalid: null }), TS)).toBeNull();
-    expect(rowToDocument(row({ lokalid: "" }), TS)).toBeNull();
+  it("stopper lastingen for rader uten uuid", () => {
+    expect(() => rowToDocument(row({ uuid: null }), TS)).toThrow("Databricks-rad mangler uuid");
+    expect(() => rowToDocument(row({ uuid: "" }), TS)).toThrow("Databricks-rad mangler uuid");
   });
 
   it("beholder øvrige felt uendret", () => {
-    const doc = rowToDocumentExpectedNotNull(row({ postnummer: "0155", gardsnummer: 7 }), TS);
+    const doc = rowToDocument(row({ postnummer: "0155", gardsnummer: 7 }), TS);
     expect(doc.postnummer).toBe("0155");
     expect(doc.gardsnummer).toBe(7);
     expect(doc.adressetekst).toBe("Storgata 1");
     expect(doc.kortnavn).toBe("Storgata");
-    expect(doc.objid).toBe("obj-98765");
     expect(doc.seksjonsnummer).toBe(0);
   });
 });

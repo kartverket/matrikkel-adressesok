@@ -37,7 +37,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
 
     const hits = await es.search({
       index: indexName,
-      query: { term: { lokalid: "2000001" } },
+      query: { term: { uuid: "2000001" } },
     });
     expect(hits.hits.hits.length).toBe(1);
   }, 30_000);

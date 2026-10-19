@@ -38,9 +38,7 @@
         "@elastic/transport": "^9.1",
         "@matrikkel/shared-logging": "workspace:*",
         "@matrikkel/shared-schema": "workspace:*",
-        "epsg-index": "^2.0.0",
         "pino": "^10.3.1",
-        "proj4": "^2.22.0",
       },
       "devDependencies": {
         "@types/bun": "^1.4.0",

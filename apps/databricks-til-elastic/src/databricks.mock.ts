@@ -18,8 +18,16 @@ export function createFakeDatabricksClient(): MinimalDatabricksClient {
       return {
         async openSession() {
           return {
-            async executeStatement() {
+            async executeStatement(query: string) {
               const rows = (await Bun.file(fixtureFilePath).json()) as DatabricksRow[];
+              if (query.startsWith("select count(*)")) {
+                return {
+                  iterateRows: async function* () {
+                    yield { total: rows.length };
+                  },
+                  async close() {},
+                };
+              }
               return {
                 iterateRows: async function* () {
                   for (const row of rows) yield row;

@@ -28,9 +28,10 @@ export function createIndex(index: string): Promise<estypes.IndicesCreateRespons
 export function loadDocumentStream(index: string, docs: AsyncIterator<AddressDocument>) {
   return es.helpers.bulk({
     datasource: docs,
-    onDocument: (doc) => ({ index: { _index: index, _id: doc.lokalid } }),
+    concurrency: 1,
+    onDocument: (doc) => ({ index: { _index: index, _id: doc.uuid } }),
     onDrop: (doc) =>
-      logger.error({ lokalid: doc.document.lokalid, reason: doc.error?.reason }, "dokument avvist"),
+      logger.error({ uuid: doc.document.uuid, reason: doc.error?.reason }, "dokument avvist"),
   });
 }
 
