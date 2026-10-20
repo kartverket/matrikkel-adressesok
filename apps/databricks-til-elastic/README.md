@@ -6,7 +6,9 @@ Elasticsearch. Konsumentene bruker aliaset `ed_adressesok`, ikke et indeksnavn.
 ## Flyt og opprydding
 
 Jobben teller radene, oppretter en ny indeks, strømmer og indekserer
-dokumentene, aktiverer søk og verifiserer antall og avvik fra forrige indeks.
+dokumentene, aktiverer søk og verifiserer at alle leste dokumenter er indeksert.
+Økning på over 10 % fra forrige indeks logges som advarsel, mens nedgang
+på over 10 % stopper importen.
 Først når kontrollene er bestått, byttes aliaset atomisk. Ved feil før
 aliasbyttet blir gammel indeks værende i bruk; den nye beholdes for feilsøking.
 Etter aliasbyttet slettes bare indekser med jobbens eget navnemønster og

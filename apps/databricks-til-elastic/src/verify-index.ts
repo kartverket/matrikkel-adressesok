@@ -12,7 +12,7 @@ export class CheckFailed extends Error {
 
 export function relativeDeviationPercent(newValue: number, previousValue: number): number {
   if (previousValue === 0) return newValue === 0 ? 0 : 100;
-  return (Math.abs(newValue - previousValue) / previousValue) * 100;
+  return ((newValue - previousValue) / previousValue) * 100;
 }
 
 export interface Counts {
@@ -78,10 +78,19 @@ export function assertHealthy(
   }
 
   const deviationPercent = relativeDeviationPercent(documentsInNewIndex, documentsInPreviousIndex);
-  if (
-    documentsInPreviousIndex > 0 &&
-    deviationPercent > MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX
-  ) {
-    throw new CheckFailed(`${deviationPercent.toFixed(1)} % avvik fra gammel indeks`);
+  if (documentsInPreviousIndex > 0) {
+    if (deviationPercent < -MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX) {
+      throw new CheckFailed(`${deviationPercent.toFixed(1)} % avvik fra gammel indeks`);
+    }
+    if (deviationPercent > MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX) {
+      logger.warn(
+        {
+          documentsInNewIndex,
+          documentsInPreviousIndex,
+          deviationPercent: Number(deviationPercent.toFixed(2)),
+        },
+        "stort avvik fra gammel indeks",
+      );
+    }
   }
 }
