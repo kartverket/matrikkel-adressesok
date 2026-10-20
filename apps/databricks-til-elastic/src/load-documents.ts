@@ -2,8 +2,7 @@ import { getRequiredEnvVar, PROGRESS_LOG_PERCENT_STEP } from "./config";
 import type { DatabricksSource } from "./databricks";
 import { createIndex, es } from "./elastic";
 import { logger } from "./logger";
-import type { AddressDocument, DatabricksRow } from "./schema";
-import { rowToDocument } from "./transform";
+import { type AddressDocument, type DatabricksRow, rowToDocument } from "./schema";
 
 export async function loadDocuments(index: string, source: DatabricksSource, timestamp: string) {
   const table = getRequiredEnvVar("DATABRICKS_TABLE");

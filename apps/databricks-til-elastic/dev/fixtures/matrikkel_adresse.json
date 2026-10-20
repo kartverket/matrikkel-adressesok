@@ -12,18 +12,22 @@
     "adressekode": null,
     "nummer": null,
     "bokstav": null,
-    "bruksenhetsnummer": null,
+    "bruksenhetsnummer": [],
     "kommunenavn": "Oslo",
     "kommunenummer": "0301",
     "postnummer": "0155",
     "poststed": "OSLO",
     "gardsnummer": 2,
     "bruksnummer": 2,
-    "festenummer": null,
+    "festenummer": 0,
     "seksjonsnummer": 0,
     "representasjonspunkt": { "lat": 59.91, "lon": 10.75 },
     "representasjonspunkt_stedfesting_verifisert": true,
-    "atkomstpunkt": null
+    "atkomstpunkt": {
+      "sommer": null,
+      "vinter": null,
+      "generell": null
+    }
   },
   {
     "uuid": "2000002",
@@ -33,9 +37,9 @@
     "adressetekst": "Storgata 2",
     "adressetekstutenadressetilleggsnavn": "Storgata 2",
     "adressenavn": "Storgata",
-    "adressetilleggsnavn": null,
+    "adressetilleggsnavn": "",
     "kortnavn": "Storgata",
-    "adressekode": null,
+    "adressekode": "",
     "nummer": 2,
     "bokstav": null,
     "bruksenhetsnummer": ["", "H0101"],
@@ -43,13 +47,17 @@
     "kommunenummer": "4601",
     "postnummer": "5003",
     "poststed": "BERGEN",
-    "gardsnummer": null,
-    "bruksnummer": null,
-    "festenummer": null,
-    "seksjonsnummer": null,
+    "gardsnummer": 0,
+    "bruksnummer": 0,
+    "festenummer": 0,
+    "seksjonsnummer": 0,
     "representasjonspunkt": { "lat": 60.39, "lon": 5.32 },
     "representasjonspunkt_stedfesting_verifisert": true,
-    "atkomstpunkt": { "generell": { "lat": 60.39, "lon": 5.32 } }
+    "atkomstpunkt": {
+      "sommer": null,
+      "vinter": null,
+      "generell": { "lat": 60.39, "lon": 5.32 }
+    }
   },
   {
     "uuid": "2000003",
@@ -59,9 +67,9 @@
     "adressetekst": "Vinterveien 3",
     "adressetekstutenadressetilleggsnavn": "Vinterveien 3",
     "adressenavn": "Vinterveien",
-    "adressetilleggsnavn": null,
-    "kortnavn": null,
-    "adressekode": null,
+    "adressetilleggsnavn": "",
+    "kortnavn": "",
+    "adressekode": "",
     "nummer": 3,
     "bokstav": null,
     "bruksenhetsnummer": [],
@@ -69,15 +77,16 @@
     "kommunenummer": "5501",
     "postnummer": "9008",
     "poststed": "TROMSØ",
-    "gardsnummer": null,
-    "bruksnummer": null,
-    "festenummer": null,
-    "seksjonsnummer": null,
+    "gardsnummer": 0,
+    "bruksnummer": 0,
+    "festenummer": 0,
+    "seksjonsnummer": 0,
     "representasjonspunkt": { "lat": 69.65, "lon": 18.96 },
     "representasjonspunkt_stedfesting_verifisert": false,
     "atkomstpunkt": {
       "sommer": { "lat": 69.65, "lon": 18.96 },
-      "vinter": { "lat": 69.66, "lon": 18.97 }
+      "vinter": { "lat": 69.66, "lon": 18.97 },
+      "generell": { "lat": 69.65, "lon": 18.96 }
     }
   }
 ]

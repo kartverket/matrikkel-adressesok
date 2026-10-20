@@ -64,6 +64,6 @@ function mockRow(example: DatabricksRow, index: number): DatabricksRow {
     adressetekst: `${example.adressetekst} (${index + 1})`,
     adressetekstutenadressetilleggsnavn: `${example.adressetekstutenadressetilleggsnavn} (${index + 1})`,
     nummer: example.nummer === null ? null : index + 1,
-    bruksnummer: example.bruksnummer === null ? null : index + 1,
+    bruksnummer: index + 1,
   };
 }

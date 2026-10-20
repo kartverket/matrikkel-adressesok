@@ -54,6 +54,15 @@ describe("runLoad mot lokal Elasticsearch", () => {
       query: { term: { uuid: "2000001" } },
     });
     expect(hits.hits.hits.length).toBe(1);
+    expect(hits.hits.hits[0]?._source).toMatchObject({
+      adressenavn: null,
+      kortnavn: null,
+      adressetilleggsnavn: null,
+      adressekode: null,
+      nummer: null,
+      bokstav: null,
+      atkomstpunkt: { sommer: null, vinter: null, generell: null },
+    });
 
     const last = await es.search({
       index: indexName,
@@ -67,11 +76,23 @@ describe("runLoad mot lokal Elasticsearch", () => {
     });
     expect(streetAddresses).toBe(66);
 
+    const { count: unitNumbers } = await es.count({
+      index: indexName,
+      query: { exists: { field: "bruksenhetsnummer" } },
+    });
+    expect(unitNumbers).toBe(33);
+
     const { count: seasonalAccessPoints } = await es.count({
       index: indexName,
       query: { exists: { field: "atkomstpunkt.vinter" } },
     });
     expect(seasonalAccessPoints).toBe(33);
+
+    const { count: generalAccessPoints } = await es.count({
+      index: indexName,
+      query: { exists: { field: "atkomstpunkt.generell" } },
+    });
+    expect(generalAccessPoints).toBe(66);
   }, 30_000);
 
   it("bytter aliaset til en ny indeks og lar den gamle stå i 48 timer", async () => {

@@ -1,5 +1,9 @@
 import type { estypes } from "@elastic/elasticsearch";
-import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
+import {
+  type ElasticAddressDocument,
+  ElasticAddressDocumentSchema,
+} from "@matrikkel/shared-schema";
+import { z } from "zod";
 
 /**
  * Raden slik den kommer fra Databricks-tabellen. Én flat tabell dekker
@@ -13,34 +17,44 @@ import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
  * (`adressesok`) for å unngå et samtidig brudd der.
  *
  * `representasjonspunkt`/`atkomstpunkt`/`bruksenhetsnummer` valideres
- * ved mapping i `transform.ts`, slik at ugyldige kildeverdier stopper lastingen.
+ * her slik at ugyldige kildeverdier stopper lastingen.
  */
-export interface DatabricksRow {
-  uuid: string | null;
-  adresse_id: number | null;
-  adressetype: string | null;
-  oppdateringsdato: string | null;
-  adressetekst: string | null;
-  adressetekstutenadressetilleggsnavn: string | null;
-  adressenavn: string | null;
-  adressetilleggsnavn: string | null;
-  kortnavn: string | null;
-  adressekode: string | null;
-  nummer: number | null;
-  bokstav: string | null;
-  bruksenhetsnummer: unknown;
-  kommunenavn: string | null;
-  kommunenummer: string | null;
-  postnummer: string | null;
-  poststed: string | null;
-  gardsnummer: number | null;
-  bruksnummer: number | null;
-  festenummer: number | null;
-  seksjonsnummer: number | null;
-  representasjonspunkt: unknown;
-  representasjonspunkt_stedfesting_verifisert: boolean | null;
-  atkomstpunkt: unknown;
-}
+const PointSchema = z.object({ lat: z.number(), lon: z.number() });
+
+export const DatabricksRowSchema = z
+  .object({
+    uuid: z.string().min(1),
+    adresse_id: z.number(),
+    adressetype: z.string(),
+    oppdateringsdato: z.string(),
+    adressetekst: z.string(),
+    adressetekstutenadressetilleggsnavn: z.string(),
+    adressenavn: z.string().nullable(),
+    adressetilleggsnavn: z.string().nullable(),
+    kortnavn: z.string().nullable(),
+    adressekode: z.string().nullable(),
+    nummer: z.number().nullable(),
+    bokstav: z.string().nullable(),
+    bruksenhetsnummer: z.array(z.string()),
+    kommunenavn: z.string(),
+    kommunenummer: z.string(),
+    postnummer: z.string(),
+    poststed: z.string(),
+    gardsnummer: z.number(),
+    bruksnummer: z.number(),
+    festenummer: z.number(),
+    seksjonsnummer: z.number(),
+    representasjonspunkt: PointSchema,
+    representasjonspunkt_stedfesting_verifisert: z.boolean(),
+    atkomstpunkt: z.object({
+      sommer: PointSchema.nullable(),
+      vinter: PointSchema.nullable(),
+      generell: PointSchema.nullable(),
+    }),
+  })
+  .strict();
+
+export type DatabricksRow = z.infer<typeof DatabricksRowSchema>;
 
 /**
  * Kolonner vi henter fra Databricks-tabellen, i den rekkefølgen de velges
@@ -81,9 +95,36 @@ export const COLUMNS: ReadonlyArray<keyof DatabricksRow> = [
  * bruk direkte når den migrerer bort fra sin eldre `AddressDocument`
  * (`lokalid`, `objtype`, `adresse_kommunenummer`, `stedfestingverifisert`,
  * ...) - inntil da lever de to modellene side om side. Speiler `MAPPING`
- * under. `transform.ts` er eneste sted som bygger disse.
+ * under. `rowToDocument` er eneste sted som bygger disse.
  */
 export type AddressDocument = ElasticAddressDocument;
+
+export function rowToDocument(row: DatabricksRow, timestamp: string): AddressDocument {
+  if (row.uuid == null || row.uuid === "") {
+    throw new Error("Databricks-rad mangler uuid");
+  }
+
+  const source = DatabricksRowSchema.safeParse(row);
+  if (!source.success) {
+    throw new Error(`Ugyldig Databricks-rad for uuid ${row.uuid}: ${source.error.message}`, {
+      cause: source.error,
+    });
+  }
+
+  const result = ElasticAddressDocumentSchema.strict().safeParse({
+    ...source.data,
+    adresse_id: String(source.data.adresse_id),
+    bruksenhetsnummer: source.data.bruksenhetsnummer.filter((number) => number !== ""),
+    "@version": "2",
+    "@timestamp": timestamp,
+  });
+  if (!result.success) {
+    throw new Error(`Ugyldig dokument for uuid ${row.uuid}: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
+  return result.data;
+}
 
 const tekst: estypes.MappingProperty = {
   type: "text",
