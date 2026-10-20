@@ -9,11 +9,6 @@ const PointShapeSchema = z
 
 export const PointSchema = PointShapeSchema;
 
-/**
- * `atkomstpunkt` modellert etter kodelista `TypeAtkomst` (produktspek.
- * kap. 5.1.2.17) - sommer/vinter/generell-varianter av samme adkomstpunkt.
- * Nesten alltid null i praksis.
- */
 const AtkomstpunktShapeSchema = z
   .object({
     sommer: PointShapeSchema.optional(),
@@ -33,11 +28,6 @@ const AtkomstpunktShapeSchema = z
 
 export const AtkomstpunktSchema = AtkomstpunktShapeSchema;
 
-/**
- * En array med bruksenhetsnummer, f.eks. `["H0101","H0102"]` - noen ganger
- * med tomme strenger iblandet, som ikke er reelle bruksenhetsnummer og
- * filtreres bort. Tom etter filtrering (eller manglende) blir `null`.
- */
 const BruksenhetsnummerShapeSchema = z
   .array(z.string())
   .nullable()

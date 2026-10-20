@@ -1,9 +1,10 @@
 import type { estypes } from "@elastic/elasticsearch";
 import { Client } from "@elastic/elasticsearch";
-import { HttpConnection } from "@elastic/transport";
+import { errors, HttpConnection } from "@elastic/transport";
 import { ALIAS, getRequiredEnvVar, INDEX_PREFIX, NUMBER_OF_REPLICAS } from "./config";
 import { logger } from "./logger";
 import { type AddressDocument, MAPPING } from "./schema";
+import { staleIndicesWithoutAlias } from "./stale-indices";
 
 const apiKey = process.env.ES_API_KEY;
 export const es = new Client({
@@ -17,8 +18,13 @@ export function newIndexName(now: Date): string {
 }
 
 export async function indicesWithAlias(): Promise<string[]> {
-  const alias = await es.indices.getAlias({ name: ALIAS }, { ignore: [404] });
-  return Object.keys(alias).filter((i) => i.startsWith(INDEX_PREFIX));
+  try {
+    const alias = await es.indices.getAlias({ name: ALIAS });
+    return Object.keys(alias);
+  } catch (error) {
+    if (error instanceof errors.ResponseError && error.meta.statusCode === 404) return [];
+    throw error;
+  }
 }
 
 export function createIndex(index: string): Promise<estypes.IndicesCreateResponse> {
@@ -63,4 +69,18 @@ export async function swapAliasAtomically(
 export async function deleteIndices(indices: string[]): Promise<void> {
   if (indices.length === 0) return;
   await es.indices.delete({ index: indices }, { ignore: [404] });
+}
+
+export async function deleteStaleIndicesWithoutAlias(
+  now: Date,
+  activeIndex: string,
+): Promise<string[]> {
+  const indices = await es.indices.get({
+    index: `${INDEX_PREFIX}-*`,
+    allow_no_indices: true,
+    ignore_unavailable: true,
+  });
+  const stale = staleIndicesWithoutAlias(indices, now).filter((index) => index !== activeIndex);
+  await deleteIndices(stale);
+  return stale;
 }

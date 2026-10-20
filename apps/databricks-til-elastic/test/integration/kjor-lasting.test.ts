@@ -11,18 +11,23 @@ process.env.DATABRICKS_TABLE ??= "mock_matrikkel_adresse";
 process.env.ES_URL ??= "http://localhost:9201";
 process.env.INDEX_SUFFIX = `-test-${Date.now()}`;
 
-const { ALIAS } = await import("../../src/config");
+const { ALIAS, INDEX_PREFIX } = await import("../../src/config");
 const { es, indicesWithAlias, deleteIndices } = await import("../../src/elastic");
 const { runLoad, closeClients } = await import("../../src/runner");
 
 describe("runLoad mot lokal Elasticsearch", () => {
   afterAll(async () => {
-    const indices = await indicesWithAlias();
-    await deleteIndices(indices);
+    const indices = await es.indices.get({
+      index: `${INDEX_PREFIX}-*`,
+      allow_no_indices: true,
+      ignore_unavailable: true,
+    });
+    await deleteIndices(Object.keys(indices));
     await closeClients();
   }, 30_000);
 
   it("laster fixtures inn i en ny indeks og peker aliaset dit", async () => {
+    expect(await indicesWithAlias()).toEqual([]);
     await runLoad();
 
     const indices = await indicesWithAlias();
@@ -42,7 +47,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
     expect(hits.hits.hits.length).toBe(1);
   }, 30_000);
 
-  it("bytter aliaset til en ny indeks og sletter den gamle ved andre kjøring", async () => {
+  it("bytter aliaset til en ny indeks og lar den gamle stå i 48 timer", async () => {
     const indicesBeforeSecondRun = await indicesWithAlias();
 
     await runLoad();
@@ -53,7 +58,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
 
     for (const oldIndex of indicesBeforeSecondRun) {
       const exists = await es.indices.exists({ index: oldIndex });
-      expect(exists).toBe(false);
+      expect(exists).toBe(true);
     }
   }, 30_000);
 });

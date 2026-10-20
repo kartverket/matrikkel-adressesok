@@ -13,15 +13,16 @@ til slutt:
 4. Slå på refresh og replicas                              (alias uberørt)
 5. Fornuftssjekk: antall dokumenter og avvik mot gammel    (alias uberørt)
 6. Bytt alias i ett atomisk kall
-7. Slett gamle indekser aliaset ikke lenger peker på
+7. Slett jobbens egne indekser eldre enn 48 timer som ikke har noe alias
 ```
 
 Feiler noe i steg 1–5, står aliaset urørt på gammel indeks og trafikken er
 upåvirket. Feil etter opprettelsen lar den halvferdige indeksen ligge igjen
-for feilsøking. Steg 7 rydder bare opp indekser som akkurat ble byttet bort
-fra alias i steg 6 -
-feiler oppryddingen, logges det som en advarsel, men jobben regnes likevel
-som vellykket siden aliaset allerede peker riktig.
+for feilsøking. Steg 7 rydder bare opp indekser med jobbens navnemønster
+som er minst 48 timer gamle og ikke har noe alias. Navn med andre miljøsuffikser
+eller ugyldig tidsstempel blir ikke slettet. Feiler oppryddingen, logges det
+som en advarsel, men jobben regnes likevel som vellykket siden aliaset
+allerede peker riktig.
 
 `transform.ts` mapper og validerer hele dokumentet før indeksering.
 `representasjonspunkt` og `atkomstpunkt` forventes som objekter, og

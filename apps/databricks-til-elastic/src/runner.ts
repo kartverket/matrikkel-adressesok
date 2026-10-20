@@ -4,7 +4,7 @@ import { createDatabricksSource } from "./databricks";
 import { createFakeDatabricksClient } from "./databricks.mock";
 import {
   createIndex,
-  deleteIndices,
+  deleteStaleIndicesWithoutAlias,
   docCount,
   es,
   indicesWithAlias,
@@ -72,13 +72,11 @@ export async function runLoad(): Promise<void> {
   await swapAliasAtomically(newIndex, previousIndicesWithAlias);
   logger.info({ newIndex, documentsInNewIndex }, "alias byttet, ferdig");
 
-  if (previousIndicesWithAlias.length) {
-    await deleteIndices(previousIndicesWithAlias).catch((deleteError) =>
-      logger.warn(
-        { err: deleteError, previousIndicesWithAlias },
-        "klarte ikke slette gamle indekser",
-      ),
-    );
+  try {
+    const deletedIndices = await deleteStaleIndicesWithoutAlias(new Date(), newIndex);
+    logger.info({ deletedIndices }, "ryddet gamle indekser uten alias");
+  } catch (err) {
+    logger.warn({ err }, "klarte ikke rydde gamle indekser uten alias");
   }
 }
 
