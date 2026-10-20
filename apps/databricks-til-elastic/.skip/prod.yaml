@@ -5,9 +5,9 @@ metadata:
   namespace: matrikkel-main
 spec:
   cron:
-    # Hver natt kl 03:00 UTC. SKIP-jobber kjører i UTC med mindre timeZone
+    # Hver natt kl 06:00 UTC. SKIP-jobber kjører i UTC med mindre timeZone
     # er satt - se dokumentasjonen.
-    schedule: "0 3 * * *"
+    schedule: "0 6 * * *"
   job:
     ttlSecondsAfterFinished: 3600
     activeDeadlineSeconds: 3600
