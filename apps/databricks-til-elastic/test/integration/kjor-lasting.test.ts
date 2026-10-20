@@ -4,8 +4,10 @@ import { afterAll, describe, expect, it } from "bun:test";
 // de er satt før den kobler til (se databricks.ts).
 process.env.DATABRICKS_HOST ??= "mock.gcp.databricks.com";
 process.env.DATABRICKS_HTTP_PATH ??= "/sql/1.0/warehouses/mock";
-process.env.DATABRICKS_CLIENT_ID ??= "mock-client-id";
-process.env.DATABRICKS_CLIENT_SECRET ??= "mock-client-secret";
+process.env.DATABRICKS_CLIENT_SECRET = JSON.stringify({
+  client_id: "mock-client-id",
+  client_secret: "mock-client-secret",
+});
 process.env.DATABRICKS_TABLE ??= "mock_matrikkel_adresse";
 process.env.ES_URL ??= "http://localhost:9201";
 process.env.ENVIRONMENT = "DEVELOPMENT";
@@ -42,7 +44,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
 
     const indexName = indices[0] as string;
     const { count } = await es.count({ index: indexName });
-    expect(count).toBeGreaterThan(0);
+    expect(count).toBe(100);
 
     const alias = await es.indices.getAlias({ name: ALIAS });
     expect(Object.keys(alias)).toEqual([indexName]);
@@ -52,6 +54,24 @@ describe("runLoad mot lokal Elasticsearch", () => {
       query: { term: { uuid: "2000001" } },
     });
     expect(hits.hits.hits.length).toBe(1);
+
+    const last = await es.search({
+      index: indexName,
+      query: { term: { uuid: "2000100" } },
+    });
+    expect(last.hits.hits).toHaveLength(1);
+
+    const { count: streetAddresses } = await es.count({
+      index: indexName,
+      query: { term: { adressetype: "Vegadresse" } },
+    });
+    expect(streetAddresses).toBe(66);
+
+    const { count: seasonalAccessPoints } = await es.count({
+      index: indexName,
+      query: { exists: { field: "atkomstpunkt.vinter" } },
+    });
+    expect(seasonalAccessPoints).toBe(33);
   }, 30_000);
 
   it("bytter aliaset til en ny indeks og lar den gamle stå i 48 timer", async () => {

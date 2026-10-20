@@ -19,7 +19,7 @@ export function createFakeDatabricksClient(): MinimalDatabricksClient {
         async openSession() {
           return {
             async executeStatement(query: string) {
-              const rows = (await Bun.file(fixtureFilePath).json()) as DatabricksRow[];
+              const rows = await mockRows();
               if (query.startsWith("select count(*)")) {
                 return {
                   iterateRows: async function* () {
@@ -28,6 +28,7 @@ export function createFakeDatabricksClient(): MinimalDatabricksClient {
                   async close() {},
                 };
               }
+
               return {
                 iterateRows: async function* () {
                   for (const row of rows) yield row;
@@ -41,5 +42,28 @@ export function createFakeDatabricksClient(): MinimalDatabricksClient {
       };
     },
     async close() {},
+  };
+}
+
+async function mockRows(): Promise<DatabricksRow[]> {
+  const examples = (await Bun.file(fixtureFilePath).json()) as DatabricksRow[];
+  if (examples.length === 0) throw new Error("Databricks-fixturen er tom");
+  return Array.from({ length: 100 }, (_, index) => {
+    const example = examples[index % examples.length];
+    if (!example) throw new Error("Databricks-fixturen er tom");
+    return mockRow(example, index);
+  });
+}
+
+function mockRow(example: DatabricksRow, index: number): DatabricksRow {
+  const id = 2000001 + index;
+  return {
+    ...example,
+    uuid: String(id),
+    adresse_id: id,
+    adressetekst: `${example.adressetekst} (${index + 1})`,
+    adressetekstutenadressetilleggsnavn: `${example.adressetekstutenadressetilleggsnavn} (${index + 1})`,
+    nummer: example.nummer === null ? null : index + 1,
+    bruksnummer: example.bruksnummer === null ? null : index + 1,
   };
 }

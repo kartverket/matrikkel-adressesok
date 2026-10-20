@@ -49,6 +49,20 @@ describe("assertHealthy", () => {
     ).toThrow("bare 999 dokumenter, forventet minst 1000");
   });
 
+  it("tillater liten fixture i development, men ikke tom indeks", () => {
+    const small = {
+      acceptedByBulkHelper: 3,
+      rejectedByElasticsearch: 0,
+      documentsInNewIndex: 3,
+      documentsInPreviousIndex: 0,
+    };
+    expect(() => assertHealthy(small, 1)).not.toThrow();
+    expect(() =>
+      assertHealthy({ ...small, acceptedByBulkHelper: 0, documentsInNewIndex: 0 }, 1),
+    ).toThrow("bare 0 dokumenter, forventet minst 1");
+    expect(() => assertHealthy(small)).toThrow("bare 3 dokumenter, forventet minst 1000");
+  });
+
   it("stopper på for stor diff mot gammel indeks", () => {
     expect(() =>
       assertHealthy({

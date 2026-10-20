@@ -30,8 +30,6 @@ spec:
       value: "3359340685875444.4.gcp.databricks.com"
     - name: DATABRICKS_HTTP_PATH
       value: "/sql/1.0/warehouses/7b7b34fd5e55d6f1"
-    - name: DATABRICKS_CLIENT_ID
-      gsmSecretName: "databricks-to-elastic-databricks-client-id"
     - name: DATABRICKS_CLIENT_SECRET
       gsmSecretName: "databricks-to-elastic-databricks-client-secret"
     - name: DATABRICKS_TABLE

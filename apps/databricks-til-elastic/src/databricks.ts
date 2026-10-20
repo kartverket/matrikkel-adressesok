@@ -5,6 +5,7 @@ import type {
 } from "@databricks/sql/dist/contracts/IDBSQLClient";
 import type { ExecuteStatementOptions } from "@databricks/sql/dist/contracts/IDBSQLSession";
 import type { IteratorOptions } from "@databricks/sql/dist/contracts/IOperation";
+import { z } from "zod";
 import { getRequiredEnvVar, ROWS_PER_BATCH_FROM_DATABRICKS } from "./config";
 import { logger } from "./logger";
 import { COLUMNS, type DatabricksRow } from "./schema";
@@ -32,6 +33,26 @@ export interface DatabricksSource {
   close(): Promise<void>;
 }
 
+const CredentialsSchema = z.object({
+  client_id: z.string().min(1),
+  client_secret: z.string().min(1),
+});
+
+function getCredentials(): z.infer<typeof CredentialsSchema> {
+  const raw = getRequiredEnvVar("DATABRICKS_CLIENT_SECRET");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("DATABRICKS_CLIENT_SECRET må være gyldig JSON med client_id og client_secret");
+  }
+  const result = CredentialsSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error("DATABRICKS_CLIENT_SECRET må inneholde client_id og client_secret");
+  }
+  return result.data;
+}
+
 export function createDatabricksSource(
   clientFactory: () => MinimalDatabricksClient = () => new DBSQLClient(),
 ): DatabricksSource {
@@ -47,13 +68,14 @@ export function createDatabricksSource(
 
   async function connectAndOpenSession(): Promise<Session> {
     try {
+      const credentials = getCredentials();
       const connection = await client.connect({
         host: getRequiredEnvVar("DATABRICKS_HOST"),
         path: getRequiredEnvVar("DATABRICKS_HTTP_PATH"),
         authType: "databricks-oauth",
         oauthScopes: ["all-apis"],
-        oauthClientId: getRequiredEnvVar("DATABRICKS_CLIENT_ID"),
-        oauthClientSecret: getRequiredEnvVar("DATABRICKS_CLIENT_SECRET"),
+        oauthClientId: credentials.client_id,
+        oauthClientSecret: credentials.client_secret,
       });
       return await connection.openSession();
     } catch (err) {

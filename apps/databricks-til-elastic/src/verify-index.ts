@@ -1,4 +1,6 @@
 import {
+  ENVIRONMENT,
+  Environment,
   MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX,
   MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD,
 } from "./config";
@@ -20,6 +22,9 @@ export interface Counts {
   documentsInPreviousIndex: number;
 }
 
+const minimumDocumentCount =
+  ENVIRONMENT === Environment.DEVELOPMENT ? 1 : MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD;
+
 export async function verifyIndex(
   newIndex: string,
   previousIndices: string[],
@@ -37,21 +42,27 @@ export async function verifyIndex(
     },
     "sammenligner med gammel indeks",
   );
-  assertHealthy({
-    acceptedByBulkHelper: bulkStats.successful,
-    rejectedByElasticsearch: bulkStats.failed,
-    documentsInNewIndex,
-    documentsInPreviousIndex,
-  });
+  assertHealthy(
+    {
+      acceptedByBulkHelper: bulkStats.successful,
+      rejectedByElasticsearch: bulkStats.failed,
+      documentsInNewIndex,
+      documentsInPreviousIndex,
+    },
+    minimumDocumentCount,
+  );
   return documentsInNewIndex;
 }
 
-export function assertHealthy({
-  acceptedByBulkHelper,
-  rejectedByElasticsearch,
-  documentsInNewIndex,
-  documentsInPreviousIndex,
-}: Counts): void {
+export function assertHealthy(
+  {
+    acceptedByBulkHelper,
+    rejectedByElasticsearch,
+    documentsInNewIndex,
+    documentsInPreviousIndex,
+  }: Counts,
+  minimumCount = MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD,
+): void {
   if (rejectedByElasticsearch > 0) {
     throw new CheckFailed(`${rejectedByElasticsearch} dokumenter ble avvist`);
   }
@@ -60,9 +71,9 @@ export function assertHealthy({
       `indeksen har ${documentsInNewIndex} dokumenter, forventet ${acceptedByBulkHelper}`,
     );
   }
-  if (documentsInNewIndex < MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD) {
+  if (documentsInNewIndex < minimumCount) {
     throw new CheckFailed(
-      `bare ${documentsInNewIndex} dokumenter, forventet minst ${MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD}`,
+      `bare ${documentsInNewIndex} dokumenter, forventet minst ${minimumCount}`,
     );
   }
 

@@ -5,8 +5,10 @@ import { COLUMNS, type DatabricksRow } from "../../src/schema";
 
 process.env.DATABRICKS_HOST = "test-workspace.gcp.databricks.com";
 process.env.DATABRICKS_HTTP_PATH = "/sql/1.0/warehouses/testwarehouse";
-process.env.DATABRICKS_CLIENT_ID = "test-client-id";
-process.env.DATABRICKS_CLIENT_SECRET = "test-client-secret";
+process.env.DATABRICKS_CLIENT_SECRET = JSON.stringify({
+  client_id: "test-client-id",
+  client_secret: "test-client-secret",
+});
 process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";
 
 const BASE: DatabricksRow = {
@@ -82,6 +84,27 @@ async function drain<T>(generator: AsyncGenerator<T>): Promise<T[]> {
 }
 
 describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", () => {
+  it("avviser ugyldige klientlegitimasjoner før tilkobling", async () => {
+    const original = process.env.DATABRICKS_CLIENT_SECRET;
+    try {
+      for (const value of [
+        "hemmelighet",
+        '{"client_id":"id"}',
+        '{"client_id":"","client_secret":"hemmelighet"}',
+        '{"client_id":"id","client_secret":42}',
+      ]) {
+        process.env.DATABRICKS_CLIENT_SECRET = value;
+        const client = createMockClient([BASE]);
+        const source = createDatabricksSource(() => client.client);
+        await expect(source.countRows()).rejects.toThrow(/DATABRICKS_CLIENT_SECRET/);
+        expect(client.connect).not.toHaveBeenCalled();
+        await source.close();
+      }
+    } finally {
+      process.env.DATABRICKS_CLIENT_SECRET = original;
+    }
+  });
+
   it("leser numerisk antall fra Databricks", async () => {
     const client = createMockClient([BASE]);
     const source = createDatabricksSource(() => client.client);
