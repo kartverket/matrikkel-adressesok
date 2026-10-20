@@ -1,4 +1,5 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
+import { logger } from "../../src/logger";
 import { assertHealthy, type Counts, relativeDeviationPercent } from "../../src/verify-index";
 
 const healthy: Counts = {
@@ -11,7 +12,7 @@ const healthy: Counts = {
 describe("relativeDeviationPercent", () => {
   it("regner ut relativt avvik", () => {
     expect(relativeDeviationPercent(110, 100)).toBeCloseTo(10);
-    expect(relativeDeviationPercent(90, 100)).toBeCloseTo(10);
+    expect(relativeDeviationPercent(90, 100)).toBeCloseTo(-10);
     expect(relativeDeviationPercent(100, 100)).toBe(0);
   });
 
@@ -63,19 +64,52 @@ describe("assertHealthy", () => {
     expect(() => assertHealthy(small)).toThrow("bare 3 dokumenter, forventet minst 1000");
   });
 
-  it("stopper på for stor diff mot gammel indeks", () => {
-    expect(() =>
-      assertHealthy({
+  it("stopper ved nedgang større enn grensen og varsler ved stor økning", () => {
+    const warning = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      const fewer = {
         acceptedByBulkHelper: 2300,
         rejectedByElasticsearch: 0,
         documentsInNewIndex: 2300,
         documentsInPreviousIndex: 5500,
-      }),
-    ).toThrow("58.2 % avvik fra gammel indeks");
+      };
+      expect(() => assertHealthy(fewer)).toThrow("-58.2 % avvik fra gammel indeks");
+      expect(warning).not.toHaveBeenCalled();
+
+      const more = {
+        ...fewer,
+        documentsInNewIndex: 5500,
+        acceptedByBulkHelper: 5500,
+        documentsInPreviousIndex: 2300,
+      };
+      expect(() => assertHealthy(more)).not.toThrow();
+      expect(warning).toHaveBeenCalledWith(
+        {
+          documentsInNewIndex: 5500,
+          documentsInPreviousIndex: 2300,
+          deviationPercent: 139.13,
+        },
+        "stort avvik fra gammel indeks",
+      );
+
+      assertHealthy({ ...healthy, documentsInPreviousIndex: 0 });
+      assertHealthy(healthy);
+      expect(warning).toHaveBeenCalledTimes(1);
+    } finally {
+      warning.mockRestore();
+    }
   });
 
   it("godtar diff innenfor grensen", () => {
     expect(() => assertHealthy({ ...healthy, documentsInPreviousIndex: 4600 })).not.toThrow();
+    expect(() =>
+      assertHealthy({
+        ...healthy,
+        acceptedByBulkHelper: 4500,
+        documentsInNewIndex: 4500,
+        documentsInPreviousIndex: 5000,
+      }),
+    ).not.toThrow();
   });
 
   it("hopper over diff-sjekken på første kjøring", () => {
