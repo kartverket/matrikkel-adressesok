@@ -1,9 +1,8 @@
 import type { estypes } from "@elastic/elasticsearch";
 import { Client } from "@elastic/elasticsearch";
-import { HttpConnection } from "@elastic/transport";
-import { ALIAS, getRequiredEnvVar, INDEX_PREFIX, NUMBER_OF_REPLICAS } from "./config";
-import { logger } from "./logger";
-import { type AddressDocument, MAPPING } from "./schema";
+import { errors, HttpConnection } from "@elastic/transport";
+import { ALIAS, getRequiredEnvVar, NUMBER_OF_REPLICAS } from "./config";
+import { MAPPING } from "./schema";
 
 const apiKey = process.env.ES_API_KEY;
 export const es = new Client({
@@ -12,26 +11,18 @@ export const es = new Client({
   ...(apiKey ? { auth: { apiKey } } : {}),
 });
 
-export function newIndexName(now: Date): string {
-  return `${INDEX_PREFIX}-${now.toISOString().replace(/\D/g, "").slice(0, 14)}`;
-}
-
 export async function indicesWithAlias(): Promise<string[]> {
-  const alias = await es.indices.getAlias({ name: ALIAS }, { ignore: [404] });
-  return Object.keys(alias).filter((i) => i.startsWith(INDEX_PREFIX));
+  try {
+    const alias = await es.indices.getAlias({ name: ALIAS });
+    return Object.keys(alias);
+  } catch (error) {
+    if (error instanceof errors.ResponseError && error.meta.statusCode === 404) return [];
+    throw error;
+  }
 }
 
 export function createIndex(index: string): Promise<estypes.IndicesCreateResponse> {
   return es.indices.create({ index, ...MAPPING });
-}
-
-export function loadDocumentStream(index: string, docs: AsyncIterator<AddressDocument>) {
-  return es.helpers.bulk({
-    datasource: docs,
-    onDocument: (doc) => ({ index: { _index: index, _id: doc.lokalid } }),
-    onDrop: (doc) =>
-      logger.error({ lokalid: doc.document.lokalid, reason: doc.error?.reason }, "dokument avvist"),
-  });
 }
 
 export async function makeIndexSearchable(index: string): Promise<void> {

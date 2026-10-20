@@ -22,3 +22,8 @@ export interface AddressDocument {
   oppdateringsdato?: string | null;
   meterDistanseTilPunkt?: number;
 }
+
+export {
+  type ElasticAddressDocument,
+  ElasticAddressDocumentSchema,
+} from "./elastic-address-document";

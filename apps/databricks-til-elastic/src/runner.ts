@@ -1,86 +1,22 @@
-import { assertHealthy, relativeDeviationPercent } from "./check";
-import * as databricks from "./databricks";
-import * as databricksMock from "./databricks.mock";
-import {
-  createIndex,
-  deleteIndices,
-  docCount,
-  es,
-  indicesWithAlias,
-  loadDocumentStream,
-  makeIndexSearchable,
-  newIndexName,
-  swapAliasAtomically,
-} from "./elastic";
+import type { DatabricksSource } from "./databricks";
+import { indicesWithAlias, makeIndexSearchable, swapAliasAtomically } from "./elastic";
+import { newIndexName } from "./index-name";
+import { loadDocuments } from "./load-documents";
 import { logger } from "./logger";
+import { cleanUpStaleIndices } from "./stale-indices";
+import { verifyIndex } from "./verify-index";
 
-function sourceForThisRun() {
-  return process.env.DATABRICKS_MOCK === "true" ? databricksMock : databricks;
-}
-
-export async function runLoad(): Promise<void> {
+export async function runLoad(source: DatabricksSource): Promise<void> {
   const runStartedAt = new Date();
   const newIndex = newIndexName(runStartedAt);
-  const timestamp = runStartedAt.toISOString();
-  const source = sourceForThisRun();
-
   const previousIndicesWithAlias = await indicesWithAlias();
   logger.info({ newIndex, previousIndicesWithAlias }, "starter");
 
-  await createIndex(newIndex);
-  const bulkStats = await loadDocumentStream(newIndex, source.documents(timestamp));
-  logger.info(
-    {
-      documentsAccepted: bulkStats.successful,
-      documentsRejected: bulkStats.failed,
-      retries: bulkStats.retry,
-      durationSeconds: Math.round(bulkStats.time / 1000),
-      dataMegabytes: Number((bulkStats.bytes / 1024 / 1024).toFixed(1)),
-    },
-    "lasting ferdig",
-  );
-
+  const bulkStats = await loadDocuments(newIndex, source, runStartedAt.toISOString());
   await makeIndexSearchable(newIndex);
-
-  const documentsInNewIndex = await docCount(newIndex);
-  const documentsInPreviousIndex = previousIndicesWithAlias.length
-    ? await docCount(previousIndicesWithAlias)
-    : 0;
-  const deviationPercent = relativeDeviationPercent(documentsInNewIndex, documentsInPreviousIndex);
-  logger.info(
-    {
-      documentsInNewIndex,
-      documentsInPreviousIndex,
-      deviationPercent: Number(deviationPercent.toFixed(2)),
-    },
-    "sammenligner med gammel indeks",
-  );
-
-  assertHealthy({
-    acceptedByBulkHelper: bulkStats.successful,
-    rejectedByElasticsearch: bulkStats.failed,
-    documentsInNewIndex,
-    documentsInPreviousIndex,
-  });
+  const documentsInNewIndex = await verifyIndex(newIndex, previousIndicesWithAlias, bulkStats);
 
   await swapAliasAtomically(newIndex, previousIndicesWithAlias);
   logger.info({ newIndex, documentsInNewIndex }, "alias byttet, ferdig");
-
-  if (previousIndicesWithAlias.length) {
-    await deleteIndices(previousIndicesWithAlias).catch((deleteError) =>
-      logger.warn(
-        { err: deleteError, previousIndicesWithAlias },
-        "klarte ikke slette gamle indekser",
-      ),
-    );
-  }
-}
-
-export async function closeClients(): Promise<void> {
-  await sourceForThisRun()
-    .close()
-    .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke kilden"));
-  await es
-    .close()
-    .catch((closeError) => logger.warn({ err: closeError }, "klarte ikke lukke ES-klienten"));
+  await cleanUpStaleIndices(newIndex);
 }

@@ -16,8 +16,6 @@ COPY apps/adressesok/package.json ./apps/adressesok/package.json
 RUN bun install --frozen-lockfile --production --filter databricks-til-elastic
 
 COPY apps/databricks-til-elastic/src ./apps/databricks-til-elastic/src
-# Fixtures for DATABRICKS_MOCK=true - brukes inntil ekte Databricks-tilgang er klar.
-COPY apps/databricks-til-elastic/dev ./apps/databricks-til-elastic/dev
 WORKDIR /app/apps/databricks-til-elastic
 
 # Satt for forutsigbare, UTC-baserte tidsstempler i logger og indeksnavn,
