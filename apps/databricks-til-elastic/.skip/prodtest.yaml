@@ -5,9 +5,9 @@ metadata:
   namespace: matrikkel-prodtest
 spec:
   cron:
-    # Hver time. SKIP-jobber kjører i UTC med mindre timeZone er satt - se
-    # dokumentasjonen.
-    schedule: "0 * * * *"
+    # Hver natt kl 03:00 UTC. SKIP-jobber kjører i UTC med mindre timeZone
+    # er satt - se dokumentasjonen.
+    schedule: "0 3 * * *"
   job:
     ttlSecondsAfterFinished: 3600
     activeDeadlineSeconds: 3600
