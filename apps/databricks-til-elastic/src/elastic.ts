@@ -1,10 +1,8 @@
 import type { estypes } from "@elastic/elasticsearch";
 import { Client } from "@elastic/elasticsearch";
 import { errors, HttpConnection } from "@elastic/transport";
-import { ALIAS, getRequiredEnvVar, INDEX_PREFIX, NUMBER_OF_REPLICAS } from "./config";
-import { logger } from "./logger";
-import { type AddressDocument, MAPPING } from "./schema";
-import { staleIndicesWithoutAlias } from "./stale-indices";
+import { ALIAS, getRequiredEnvVar, NUMBER_OF_REPLICAS } from "./config";
+import { MAPPING } from "./schema";
 
 const apiKey = process.env.ES_API_KEY;
 export const es = new Client({
@@ -12,10 +10,6 @@ export const es = new Client({
   Connection: HttpConnection,
   ...(apiKey ? { auth: { apiKey } } : {}),
 });
-
-export function newIndexName(now: Date): string {
-  return `${INDEX_PREFIX}-${now.toISOString().replace(/\D/g, "").slice(0, 14)}`;
-}
 
 export async function indicesWithAlias(): Promise<string[]> {
   try {
@@ -29,16 +23,6 @@ export async function indicesWithAlias(): Promise<string[]> {
 
 export function createIndex(index: string): Promise<estypes.IndicesCreateResponse> {
   return es.indices.create({ index, ...MAPPING });
-}
-
-export function loadDocumentStream(index: string, docs: AsyncIterator<AddressDocument>) {
-  return es.helpers.bulk({
-    datasource: docs,
-    concurrency: 1,
-    onDocument: (doc) => ({ index: { _index: index, _id: doc.uuid } }),
-    onDrop: (doc) =>
-      logger.error({ uuid: doc.document.uuid, reason: doc.error?.reason }, "dokument avvist"),
-  });
 }
 
 export async function makeIndexSearchable(index: string): Promise<void> {
@@ -69,18 +53,4 @@ export async function swapAliasAtomically(
 export async function deleteIndices(indices: string[]): Promise<void> {
   if (indices.length === 0) return;
   await es.indices.delete({ index: indices }, { ignore: [404] });
-}
-
-export async function deleteStaleIndicesWithoutAlias(
-  now: Date,
-  activeIndex: string,
-): Promise<string[]> {
-  const indices = await es.indices.get({
-    index: `${INDEX_PREFIX}-*`,
-    allow_no_indices: true,
-    ignore_unavailable: true,
-  });
-  const stale = staleIndicesWithoutAlias(indices, now).filter((index) => index !== activeIndex);
-  await deleteIndices(stale);
-  return stale;
 }

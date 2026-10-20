@@ -24,6 +24,8 @@ spec:
         - host: matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com
         - host: 3359340685875444.4.gcp.databricks.com
   env:
+    - name: ENVIRONMENT
+      value: "PROD"
     - name: DATABRICKS_HOST
       value: "3359340685875444.4.gcp.databricks.com"
     - name: DATABRICKS_HTTP_PATH
@@ -33,7 +35,7 @@ spec:
     - name: DATABRICKS_CLIENT_SECRET
       gsmSecretName: "databricks-to-elastic-databricks-client-secret"
     - name: DATABRICKS_TABLE
-      value: "matrikkel_adressesok_produkt"
+      value: "eiendom_matrikkelen-adresse.3_gold_schema.matrikkel_adressesok_produkt_gold"
     - name: ES_URL
       value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com"
     - name: ES_API_KEY

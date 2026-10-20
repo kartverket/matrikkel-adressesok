@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import { ROWS_PER_BATCH_FROM_DATABRICKS } from "../../src/config";
 import { createDatabricksSource, type MinimalDatabricksClient } from "../../src/databricks";
 import { COLUMNS, type DatabricksRow } from "../../src/schema";
@@ -36,65 +36,42 @@ const BASE: DatabricksRow = {
   representasjonspunkt: { lat: 59.91, lon: 10.75 },
 };
 
-/**
- * Minimal stand-in for @databricks/sql sin DBSQLClient, injisert i
- * `createDatabricksSource()` slik at vi kan teste hele kjeden i databricks.ts
- * (autentisering, SQL-bygging, rad-iterering og opprydding) uten et ekte
- * Databricks-warehouse.
- */
-function createSpyClient(
+function createMockClient(
   rowsToYield: DatabricksRow[],
   countRows: object[] = [{ total: rowsToYield.length }],
 ) {
-  const connectCalls: unknown[] = [];
-  const executeStatementCalls: string[] = [];
-  const iterateRowsCalls: Array<{ maxRows?: number }> = [];
-  let operationCloseCalls = 0;
-  let sessionCloseCalls = 0;
-  let clientCloseCalls = 0;
+  const operationClose = mock(async () => {});
+  const sessionClose = mock(async () => {});
+  const clientClose = mock(async () => {});
+  const iterateRows = mock((_opts: { maxRows?: number }, rows: object[]) =>
+    (async function* () {
+      for (const row of rows) yield row;
+    })(),
+  );
+  const executeStatement = mock(async (query: string) => {
+    const rows: object[] = query.startsWith("select count(*)") ? countRows : rowsToYield;
+    return {
+      iterateRows: (opts: { maxRows?: number }) => iterateRows(opts, rows),
+      close: operationClose,
+    };
+  });
+  const connect = mock(async (_options: Parameters<MinimalDatabricksClient["connect"]>[0]) => ({
+    openSession: async () => ({ executeStatement, close: sessionClose }),
+  }));
 
   const client: MinimalDatabricksClient = {
-    async connect(options) {
-      connectCalls.push(options);
-      return {
-        async openSession() {
-          return {
-            executeStatement: async (query: string) => {
-              executeStatementCalls.push(query);
-              const isCountQuery = query.startsWith("select count(*)");
-              const rows: object[] = isCountQuery ? countRows : rowsToYield;
-              return {
-                iterateRows: (opts: { maxRows?: number }) => {
-                  iterateRowsCalls.push(opts);
-                  return (async function* () {
-                    for (const row of rows) yield row;
-                  })();
-                },
-                close: async () => {
-                  operationCloseCalls++;
-                },
-              };
-            },
-            close: async () => {
-              sessionCloseCalls++;
-            },
-          };
-        },
-      };
-    },
-    async close() {
-      clientCloseCalls++;
-    },
+    connect,
+    close: clientClose,
   };
 
   return {
     client,
-    connectCalls,
-    executeStatementCalls,
-    iterateRowsCalls,
-    operationCloseCalls: () => operationCloseCalls,
-    sessionCloseCalls: () => sessionCloseCalls,
-    clientCloseCalls: () => clientCloseCalls,
+    connect,
+    executeStatement,
+    iterateRows,
+    operationClose,
+    sessionClose,
+    clientClose,
   };
 }
 
@@ -105,9 +82,9 @@ async function drain<T>(generator: AsyncGenerator<T>): Promise<T[]> {
 }
 
 describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", () => {
-  it("godtar antall som streng fra Databricks", async () => {
-    const spy = createSpyClient([BASE], [{ total: "1" }]);
-    const source = createDatabricksSource(() => spy.client);
+  it("leser numerisk antall fra Databricks", async () => {
+    const client = createMockClient([BASE]);
+    const source = createDatabricksSource(() => client.client);
     expect(await source.countRows()).toBe(1);
     await source.close();
   });
@@ -116,15 +93,15 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
     for (const result of [
       [],
       [{ total: null }],
-      [{ total: "" }],
+      [{ total: "1" }],
       [{ total: -1 }],
       [{ total: 1.5 }],
-      [{ total: "9007199254740992" }],
+      [{ total: Number.MAX_SAFE_INTEGER + 1 }],
     ]) {
-      const spy = createSpyClient([BASE], result);
-      const source = createDatabricksSource(() => spy.client);
-      await expect(source.countRows()).rejects.toThrow(/antall rader/);
-      expect(spy.operationCloseCalls()).toBe(1);
+      const client = createMockClient([BASE], result);
+      const source = createDatabricksSource(() => client.client);
+      expect(source.countRows()).rejects.toThrow(/antall rader/);
+      expect(client.operationClose).toHaveBeenCalledTimes(1);
       await source.close();
     }
   });
@@ -133,15 +110,15 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
     "kobler til med OAuth service principal, bygger spørringene og leser rader, " +
       "gjenbruker tilkoblingen og lukkes korrekt ved avslutning",
     async () => {
-      const spy = createSpyClient([BASE, { ...BASE, uuid: null }]);
-      const source = createDatabricksSource(() => spy.client);
+      const client = createMockClient([BASE, { ...BASE, uuid: null }]);
+      const source = createDatabricksSource(() => client.client);
 
       expect(await source.countRows()).toBe(2);
       const firstRun = await drain(source.rows());
 
       // Autentisering: OAuth client-credentials med service principal - ikke
       // personal access token.
-      expect(spy.connectCalls).toEqual([
+      expect(client.connect.mock.calls.map(([options]) => options)).toEqual([
         {
           host: "test-workspace.gcp.databricks.com",
           path: "/sql/1.0/warehouses/testwarehouse",
@@ -153,13 +130,13 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
       ]);
 
       // Count the table, then select its configured columns.
-      const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
+      const expectedSelect = COLUMNS.join(", ");
       const expectedTable = "`catalog`.`skjema`.`matrikkel_adresse`";
-      expect(spy.executeStatementCalls).toEqual([
+      expect(client.executeStatement.mock.calls.map(([query]) => query)).toEqual([
         `select count(*) as total from ${expectedTable}`,
         `select ${expectedSelect} from ${expectedTable}`,
       ]);
-      expect(spy.iterateRowsCalls).toEqual([
+      expect(client.iterateRows.mock.calls.map(([options]) => options)).toEqual([
         { maxRows: 1 },
         { maxRows: ROWS_PER_BATCH_FROM_DATABRICKS },
       ]);
@@ -169,49 +146,49 @@ describe("createDatabricksSource mot @databricks/sql (injisert falsk klient)", (
       expect(firstRun[1]?.uuid).toBeNull();
 
       // Begge operasjonene (count og select) lukkes etter kjøringen.
-      expect(spy.operationCloseCalls()).toBe(2);
+      expect(client.operationClose).toHaveBeenCalledTimes(2);
 
       // Andre kjøring skal gjenbruke samme tilkobling - ikke koble til på nytt.
       expect(await source.countRows()).toBe(2);
       const secondRun = await drain(source.rows());
       expect(secondRun).toHaveLength(2);
-      expect(spy.connectCalls).toHaveLength(1);
-      expect(spy.executeStatementCalls).toHaveLength(4);
-      expect(spy.operationCloseCalls()).toBe(4);
+      expect(client.connect).toHaveBeenCalledTimes(1);
+      expect(client.executeStatement).toHaveBeenCalledTimes(4);
+      expect(client.operationClose).toHaveBeenCalledTimes(4);
 
       // Avslutning: close() skal lukke både session og klient.
       await source.close();
-      expect(spy.sessionCloseCalls()).toBe(1);
-      expect(spy.clientCloseCalls()).toBe(1);
+      expect(client.sessionClose).toHaveBeenCalledTimes(1);
+      expect(client.clientClose).toHaveBeenCalledTimes(1);
     },
   );
 
   it("avviser ugyldig tabellnavn før noen spørring sendes til Databricks", async () => {
-    const spy = createSpyClient([BASE]);
-    const source = createDatabricksSource(() => spy.client);
+    const client = createMockClient([BASE]);
+    const source = createDatabricksSource(() => client.client);
     process.env.DATABRICKS_TABLE = "matrikkel_adresse; drop table x --";
 
     await expect(source.countRows()).rejects.toThrow(/Ugyldig DATABRICKS_TABLE/);
 
-    expect(spy.executeStatementCalls).toHaveLength(0);
-    expect(spy.connectCalls).toHaveLength(0);
+    expect(client.executeStatement).not.toHaveBeenCalled();
+    expect(client.connect).not.toHaveBeenCalled();
 
     process.env.DATABRICKS_TABLE = "catalog.skjema.matrikkel_adresse";
   });
 
   it("godtar katalognavn med bindestrek (Unity Catalog), hvert ledd backtick-kvotert", async () => {
-    const spy = createSpyClient([BASE]);
-    const source = createDatabricksSource(() => spy.client);
+    const client = createMockClient([BASE]);
+    const source = createDatabricksSource(() => client.client);
     process.env.DATABRICKS_TABLE =
       "eiendom_matrikkelen-adresse.3_gold_schema.matrikkel_adressesok_produkt_gold";
 
     await source.countRows();
     await drain(source.rows());
 
-    const expectedSelect = COLUMNS.map((c) => `\`${c}\``).join(", ");
+    const expectedSelect = COLUMNS.join(", ");
     const expectedTable =
       "`eiendom_matrikkelen-adresse`.`3_gold_schema`.`matrikkel_adressesok_produkt_gold`";
-    expect(spy.executeStatementCalls).toEqual([
+    expect(client.executeStatement.mock.calls.map(([query]) => query)).toEqual([
       `select count(*) as total from ${expectedTable}`,
       `select ${expectedSelect} from ${expectedTable}`,
     ]);

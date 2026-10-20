@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "start:mock": "DATABRICKS_MOCK=true DATABRICKS_HOST=mock DATABRICKS_HTTP_PATH=mock DATABRICKS_CLIENT_ID=mock DATABRICKS_CLIENT_SECRET=mock DATABRICKS_TABLE=mock bun run src/index.ts",
+    "start:mock": "ENVIRONMENT=DEVELOPMENT DATABRICKS_HOST=mock DATABRICKS_HTTP_PATH=mock DATABRICKS_CLIENT_ID=mock DATABRICKS_CLIENT_SECRET=mock DATABRICKS_TABLE=mock bun run src/index.ts",
     "es:reset": "curl -s 'http://localhost:9201/_cat/indices/ed_adressesok_v1-*?h=index' | xargs -n1 -I{} curl -fsS -X DELETE 'http://localhost:9201/{}' -o /dev/null",
     "reset": "bun run es:reset && bun run start:mock",
     "test": "bun test ./test/unit",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { assertHealthy, type Counts, relativeDeviationPercent } from "../../src/check";
+import { assertHealthy, type Counts, relativeDeviationPercent } from "../../src/verify-index";
 
 const healthy: Counts = {
   acceptedByBulkHelper: 5000,

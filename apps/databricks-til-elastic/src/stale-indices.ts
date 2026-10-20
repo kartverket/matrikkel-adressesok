@@ -1,10 +1,32 @@
 import { INDEX_PREFIX } from "./config";
+import { indexTimestamp } from "./index-name";
+import { logger } from "./logger";
+
+const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
+
+export async function cleanUpStaleIndices(activeIndex: string): Promise<void> {
+  try {
+    const { deleteIndices, es } = await import("./elastic");
+    const indices = await es.indices.get({
+      index: `${INDEX_PREFIX}-*`,
+      allow_no_indices: true,
+      ignore_unavailable: true,
+    });
+    const stale = staleIndicesWithoutAlias(indices, new Date()).filter(
+      (index) => index !== activeIndex,
+    );
+    await deleteIndices(stale);
+    logger.info({ deletedIndices: stale }, "ryddet gamle indekser uten alias");
+  } catch (err) {
+    logger.warn({ err }, "klarte ikke rydde gamle indekser uten alias");
+  }
+}
 
 export function staleIndicesWithoutAlias(
   indices: Record<string, { aliases?: Record<string, unknown> }>,
   now: Date,
 ): string[] {
-  const cutoff = now.getTime() - 2 * 24 * 60 * 60 * 1000;
+  const cutoff = now.getTime() - STALE_AFTER_MS;
 
   return Object.entries(indices)
     .filter(([index, details]) => {
@@ -13,16 +35,4 @@ export function staleIndicesWithoutAlias(
       return createdAt !== null && createdAt <= cutoff;
     })
     .map(([index]) => index);
-}
-
-function indexTimestamp(index: string): number | null {
-  const prefix = `${INDEX_PREFIX}-`;
-  if (!index.startsWith(prefix)) return null;
-
-  const suffix = index.slice(prefix.length);
-  if (!/^\d{14}$/.test(suffix)) return null;
-
-  const iso = `${suffix.slice(0, 4)}-${suffix.slice(4, 6)}-${suffix.slice(6, 8)}T${suffix.slice(8, 10)}:${suffix.slice(10, 12)}:${suffix.slice(12, 14)}.000Z`;
-  const date = new Date(iso);
-  return !Number.isNaN(date.getTime()) && date.toISOString() === iso ? date.getTime() : null;
 }

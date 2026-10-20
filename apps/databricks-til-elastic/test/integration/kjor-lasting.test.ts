@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, it } from "bun:test";
 
-process.env.DATABRICKS_MOCK = "true";
 // Brukes ikke reelt i mock-modus, men createDatabricksSource() validerer at
 // de er satt før den kobler til (se databricks.ts).
 process.env.DATABRICKS_HOST ??= "mock.gcp.databricks.com";
@@ -9,11 +8,18 @@ process.env.DATABRICKS_CLIENT_ID ??= "mock-client-id";
 process.env.DATABRICKS_CLIENT_SECRET ??= "mock-client-secret";
 process.env.DATABRICKS_TABLE ??= "mock_matrikkel_adresse";
 process.env.ES_URL ??= "http://localhost:9201";
-process.env.INDEX_SUFFIX = `-test-${Date.now()}`;
+process.env.ENVIRONMENT = "DEVELOPMENT";
+// Eget alias/prefiks per kjøring: afterAll skal aldri slette lokal DEVELOPMENT-data.
+process.env.INTEGRATION_TEST_ID = crypto.randomUUID().replaceAll("-", "");
 
 const { ALIAS, INDEX_PREFIX } = await import("../../src/config");
 const { es, indicesWithAlias, deleteIndices } = await import("../../src/elastic");
-const { runLoad, closeClients } = await import("../../src/runner");
+const { createDatabricksSource } = await import("../../src/databricks");
+const { createFakeDatabricksClient } = await import("../../src/databricks.mock");
+const { newIndexName } = await import("../../src/index-name");
+const { runLoad } = await import("../../src/runner");
+const { cleanUpStaleIndices } = await import("../../src/stale-indices");
+const source = createDatabricksSource(createFakeDatabricksClient);
 
 describe("runLoad mot lokal Elasticsearch", () => {
   afterAll(async () => {
@@ -23,12 +29,13 @@ describe("runLoad mot lokal Elasticsearch", () => {
       ignore_unavailable: true,
     });
     await deleteIndices(Object.keys(indices));
-    await closeClients();
+    await source.close();
+    await es.close();
   }, 30_000);
 
   it("laster fixtures inn i en ny indeks og peker aliaset dit", async () => {
     expect(await indicesWithAlias()).toEqual([]);
-    await runLoad();
+    await runLoad(source);
 
     const indices = await indicesWithAlias();
     expect(indices.length).toBe(1);
@@ -50,7 +57,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
   it("bytter aliaset til en ny indeks og lar den gamle stå i 48 timer", async () => {
     const indicesBeforeSecondRun = await indicesWithAlias();
 
-    await runLoad();
+    await runLoad(source);
 
     const indicesAfterSecondRun = await indicesWithAlias();
     expect(indicesAfterSecondRun.length).toBe(1);
@@ -60,5 +67,37 @@ describe("runLoad mot lokal Elasticsearch", () => {
       const exists = await es.indices.exists({ index: oldIndex });
       expect(exists).toBe(true);
     }
+  }, 30_000);
+
+  it("beholder aliaset når antall leste rader ikke stemmer med kilden", async () => {
+    const previousIndices = await indicesWithAlias();
+    const wrongCountSource = {
+      ...source,
+      countRows: async () => (await source.countRows()) + 1,
+    };
+
+    await expect(runLoad(wrongCountSource)).rejects.toThrow(/Leste .* rader/);
+    expect(await indicesWithAlias()).toEqual(previousIndices);
+  }, 30_000);
+
+  it("sletter bare gamle indekser uten alias", async () => {
+    const old = `${INDEX_PREFIX}-2020-01-01-000000000-utc`;
+    const aliased = `${INDEX_PREFIX}-2020-01-02-000000000-utc`;
+    const otherEnvironment = `${INDEX_PREFIX}-2020-01-03-000000000-utc-other`;
+    const recent = newIndexName(new Date(Date.now() + 60_000));
+    for (const index of [old, aliased, otherEnvironment, recent]) {
+      await es.indices.create({ index });
+    }
+    await es.indices.putAlias({ index: aliased, name: "integration-protected" });
+    const activeIndex = (await indicesWithAlias())[0];
+    if (!activeIndex) throw new Error("Mangler aktiv indeks");
+
+    await cleanUpStaleIndices(activeIndex);
+
+    expect(await es.indices.exists({ index: old })).toBe(false);
+    expect(await es.indices.exists({ index: aliased })).toBe(true);
+    expect(await es.indices.exists({ index: otherEnvironment })).toBe(true);
+    expect(await es.indices.exists({ index: recent })).toBe(true);
+    expect(await indicesWithAlias()).toEqual([activeIndex]);
   }, 30_000);
 });

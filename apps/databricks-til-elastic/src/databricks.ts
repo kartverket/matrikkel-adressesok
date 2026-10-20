@@ -64,12 +64,16 @@ export function createDatabricksSource(
   }
 
   async function countRows(): Promise<number> {
-    const { table, qualified } = getTable();
+    const table = getTable();
     const sql = await getSession();
-    const operation = await sql.executeStatement(`select count(*) as total from ${qualified}`);
+    const operation = await sql.executeStatement(`select count(*) as total from ${table}`);
     try {
       for await (const row of operation.iterateRows({ maxRows: 1 })) {
-        return parseRowCount((row as { total?: unknown }).total, table);
+        const total = (row as { total?: unknown }).total;
+        if (typeof total !== "number" || !Number.isSafeInteger(total) || total < 0) {
+          throw new Error(`Ugyldig antall rader fra Databricks-tabellen ${table}`);
+        }
+        return total;
       }
       throw new Error(`Mangler antall rader fra Databricks-tabellen ${table}`);
     } finally {
@@ -78,10 +82,10 @@ export function createDatabricksSource(
   }
 
   async function* rows(): AsyncGenerator<DatabricksRow> {
-    const { table, qualified } = getTable();
-    const select = COLUMNS.map((column) => `\`${column}\``).join(", ");
+    const table = getTable();
+    const select = COLUMNS.join(", ");
     const sql = await getSession();
-    const operation = await sql.executeStatement(`select ${select} from ${qualified}`);
+    const operation = await sql.executeStatement(`select ${select} from ${table}`);
     try {
       for await (const row of operation.iterateRows({
         maxRows: ROWS_PER_BATCH_FROM_DATABRICKS,
@@ -116,27 +120,17 @@ export function createDatabricksSource(
   return { countRows, rows, close };
 }
 
-function getTable(): { table: string; qualified: string } {
+function getTable(): string {
   const table = getRequiredEnvVar("DATABRICKS_TABLE");
   throwIfInvalidTableName(table);
-  const qualified = table
+  return table
     .split(".")
     .map((part) => `\`${part}\``)
     .join(".");
-  return { table, qualified };
-}
-
-function parseRowCount(rawTotal: unknown, table: string): number {
-  const validType =
-    typeof rawTotal === "number" || (typeof rawTotal === "string" && /^\d+$/.test(rawTotal));
-  const total = validType ? Number(rawTotal) : NaN;
-  if (!Number.isSafeInteger(total) || total < 0) {
-    throw new Error(`Ugyldig antall rader fra Databricks-tabellen ${table}`);
-  }
-  return total;
 }
 
 function throwIfInvalidTableName(table: string): void {
+  // Tabellnavnet brukes i SQL og må valideres for å hindre SQL-injeksjon.
   if (!/^[\w-]+(\.[\w-]+)*$/.test(table)) {
     throw new Error(`Ugyldig DATABRICKS_TABLE: ${table}`);
   }

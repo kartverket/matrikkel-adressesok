@@ -2,6 +2,7 @@ import {
   MAX_ALLOWED_DEVIATION_PERCENT_FROM_PREVIOUS_INDEX,
   MINIMUM_DOCUMENT_COUNT_FOR_SUCCESSFUL_LOAD,
 } from "./config";
+import { logger } from "./logger";
 
 export class CheckFailed extends Error {
   override readonly name = "CheckFailed";
@@ -17,6 +18,32 @@ export interface Counts {
   rejectedByElasticsearch: number;
   documentsInNewIndex: number;
   documentsInPreviousIndex: number;
+}
+
+export async function verifyIndex(
+  newIndex: string,
+  previousIndices: string[],
+  bulkStats: { successful: number; failed: number },
+): Promise<number> {
+  const { docCount } = await import("./elastic");
+  const documentsInNewIndex = await docCount(newIndex);
+  const documentsInPreviousIndex = previousIndices.length ? await docCount(previousIndices) : 0;
+  const deviationPercent = relativeDeviationPercent(documentsInNewIndex, documentsInPreviousIndex);
+  logger.info(
+    {
+      documentsInNewIndex,
+      documentsInPreviousIndex,
+      deviationPercent: Number(deviationPercent.toFixed(2)),
+    },
+    "sammenligner med gammel indeks",
+  );
+  assertHealthy({
+    acceptedByBulkHelper: bulkStats.successful,
+    rejectedByElasticsearch: bulkStats.failed,
+    documentsInNewIndex,
+    documentsInPreviousIndex,
+  });
+  return documentsInNewIndex;
 }
 
 export function assertHealthy({
