@@ -34,7 +34,7 @@ export const ALIAS =
   ENVIRONMENT === Environment.PROD ? "ed_adressesok" : `ed_adressesok${indexSuffix}`;
 export const INDEX_PREFIX = `ed_adressesok_v1${indexSuffix}`;
 
-export const ROWS_PER_BATCH_FROM_DATABRICKS = 20_000;
+export const ROWS_PER_BATCH_FROM_DATABRICKS = 5_000;
 export const PROGRESS_LOG_PERCENT_STEP = 5;
 
 export const NUMBER_OF_REPLICAS = 1;
