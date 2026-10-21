@@ -17,6 +17,8 @@
     "@matrikkel/shared-logging": "workspace:*",
     "@matrikkel/shared-schema": "workspace:*",
     "@elastic/elasticsearch": "7",
+    "@elastic/elasticsearch9": "npm:@elastic/elasticsearch@^9.1",
+    "@elastic/transport": "^9.1",
     "@hono/prometheus": "^1.0.3",
     "@hono/structured-logger": "^1.0.0",
     "@hono/swagger-ui": "^0.6.1",

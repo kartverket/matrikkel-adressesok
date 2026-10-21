@@ -5,7 +5,7 @@ import { ElasticsearchClient } from "../../src/elasticsearch";
 import { appWith } from "../unit/test.utils";
 
 const elasticsearchUrl = Bun.env.ELS_ADRESSER_URL ?? "http://localhost:9200";
-const index = Bun.env.ELS_ADRESSER_INDEX ?? "adressesok-test";
+const index = `adressesok-test-${crypto.randomUUID()}`;
 
 const config: AppConfig = {
   elasticSearch: {
@@ -14,6 +14,11 @@ const config: AppConfig = {
     password: undefined,
     index: index,
     requestTimeout: 20_000,
+  },
+  managedElasticSearch: {
+    url: "http://localhost:9201",
+    apiKey: undefined,
+    alias: "ed_adressesok-development",
   },
   port: 3000,
   logLevel: "error",
@@ -30,7 +35,6 @@ async function elasticsearch(path: string, init?: RequestInit): Promise<Response
 
 describe("Elasticsearch 7 integration", () => {
   beforeAll(async () => {
-    await elasticsearch(`/${index}`, { method: "DELETE" });
     const create = await elasticsearch(`/${index}`, {
       method: "PUT",
       body: JSON.stringify({

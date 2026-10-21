@@ -27,7 +27,6 @@ type ElasticsearchSearchResponse = {
 
 export interface Elasticsearch {
   search(body: ElasticsearchSearchBody): Promise<SearchResult>;
-
   isReady(): Promise<boolean>;
 }
 
