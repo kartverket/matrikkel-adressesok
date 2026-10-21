@@ -14,6 +14,10 @@
 | `ELS_ADRESSER_PASSWORD` | no | — | Elasticsearch basic-auth password |
 | `ELS_ADRESSER_INDEX` | no | `adressesok` | Elasticsearch index |
 | `ELS_ADRESSER_TIMEOUT_MS` | no | `20000` | Elasticsearch request timeout |
+| `ES_URL` | yes | — | URL for the new Elasticsearch 9 cluster |
+| `ES_API_KEY` | no | — | API key for the new cluster |
+| `ENVIRONMENT` | no | `DEVELOPMENT` | ES9 alias environment: `DEVELOPMENT`, `PRODTEST` or `PROD` |
+| `INTEGRATION_TEST_ID` | no | — | Test suffix for ES9 alias (only with `DEVELOPMENT`) |
 | `ADRESSER_API_LOG_LEVEL` | no | `ERROR` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 | `PORT` | no | `3000` | HTTP listen port |
 

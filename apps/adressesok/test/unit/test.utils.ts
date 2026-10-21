@@ -4,9 +4,13 @@ import { createApp } from "../../src/app";
 import type { Elasticsearch } from "../../src/elasticsearch";
 
 const logger = pino({ enabled: false });
+const managedElasticsearch = {
+  isReady: async () => true,
+  dummySearch: async () => undefined,
+};
 
 export function appWith(elasticsearch: Elasticsearch) {
-  return createApp({ elasticsearch, logger, registry: new Registry() });
+  return createApp({ elasticsearch, managedElasticsearch, logger, registry: new Registry() });
 }
 
 /**
@@ -23,6 +27,11 @@ export function appWithCapturedLogs(elasticsearch: Elasticsearch) {
     },
     { write: (line: string) => entries.push(JSON.parse(line)) },
   );
-  const app = createApp({ elasticsearch, logger: capturingLogger, registry: new Registry() });
+  const app = createApp({
+    elasticsearch,
+    managedElasticsearch,
+    logger: capturingLogger,
+    registry: new Registry(),
+  });
   return { app, entries };
 }
