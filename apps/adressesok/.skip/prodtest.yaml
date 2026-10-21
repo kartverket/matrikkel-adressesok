@@ -48,6 +48,8 @@ spec:
   env:
     - name: NO_COLOR
       value: "true"
+    - name: ENVIRONMENT
+      value: "PRODTEST"
     - name: ES_URL
       value: "https://matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com"
     - name: ES_API_KEY
