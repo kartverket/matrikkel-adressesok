@@ -4,8 +4,8 @@ import type { Registry } from "prom-client";
 import { z } from "zod";
 import type {
   AddressDocument,
-  Elasticsearch,
   ElasticsearchSearchBody,
+  SearchBackend,
   SearchHit,
 } from "../elasticsearch";
 import { jsonResponse } from "../http";
@@ -85,16 +85,22 @@ function addressWithDistance(hit: SearchHit): AddressDocument {
 
 export function registerPointSearchRoute(
   app: Hono,
-  elasticsearch: Elasticsearch,
+  searchBackend: SearchBackend,
   logger: Logger,
   prometheus: Registry,
+  options: {
+    path?: string;
+    metricName?: string;
+    metricHelp?: string;
+    logMessage?: string;
+  } = {},
 ): void {
   const timeHistogram = createHistogram({
-    name: "punktsok_query_duration_seconds",
-    help: "Time used to execute punktsok queries",
+    name: options.metricName ?? "punktsok_query_duration_seconds",
+    help: options.metricHelp ?? "Time used to execute punktsok queries",
     registers: [prometheus],
   });
-  app.get("/punktsok", validateQuery(GeoPointSchema), async (context) => {
+  app.get(options.path ?? "/punktsok", validateQuery(GeoPointSchema), async (context) => {
     const parameters = context.req.valid("query");
     const point = reprojectInputToDefault(parameters.lat, parameters.lon, parameters.koordsys);
     const body = geoPointSearchBody(
@@ -104,8 +110,8 @@ export function registerPointSearchRoute(
       parameters.side * parameters.treffPerSide,
       parameters.treffPerSide,
     );
-    logger.debug({ query: body.query }, "Elasticsearch geo query");
-    const result = await measureTime(timeHistogram, () => elasticsearch.search(body));
+    logger.debug({ query: body.query }, options.logMessage ?? "Elasticsearch geo query");
+    const result = await measureTime(timeHistogram, () => searchBackend.search(body));
     const addresses = result.hits.map(addressWithDistance);
     const output: AddressListOutput = {
       metadata: metadata(

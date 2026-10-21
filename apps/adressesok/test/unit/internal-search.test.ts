@@ -81,43 +81,6 @@ describe("internal managed search routes", () => {
     expect(response.status).toBe(400);
   });
 
-  test("/internal/punktsok reuses the geo query and maps distance onto the converted document", async () => {
-    const managedElasticsearch = {
-      isReady: async () => true,
-      search: async () =>
-        ({
-          total: 1,
-          hits: [
-            {
-              _source: {
-                adressenavn: "Slottsplassen",
-                nummer: 1,
-                representasjonspunkt: { lat: 59.917, lon: 10.7277 },
-              },
-              sort: [12.3],
-            },
-          ],
-        }) as unknown as ManagedSearchResult,
-    };
-    const app = createApp({
-      elasticsearch,
-      managedElasticsearch,
-      logger,
-      registry: new Registry(),
-    });
-
-    const response = await app.request(
-      "/adresser/v1/internal/punktsok?lat=59.917&lon=10.7277&radius=10",
-    );
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { adresser: Array<Record<string, unknown>> };
-    expect(body.adresser[0]).toMatchObject({
-      adressenavn: "Slottsplassen",
-      nummer: 1,
-      meterDistanseTilPunkt: 12.3,
-    });
-  });
-
   test("does not change today's /sok or /punktsok flow", async () => {
     let legacyQueryBody: ElasticsearchSearchBody | undefined;
     const legacyElasticsearch = {

@@ -8,9 +8,9 @@ import type { Elasticsearch } from "./elasticsearch";
 import { HttpError, jsonResponse } from "./http";
 import { createStructuredHonoLogger } from "./logger";
 import type { ManagedElasticsearchClient } from "./managed-elasticsearch";
+import { createManagedSearchBackend } from "./managed-search-backend";
 import openapiSpec from "./openapi.json" with { type: "json" };
-import { registerInternalPointSearchRoute } from "./routes/internal-point-search";
-import { registerInternalSearchRoute } from "./routes/internal-search";
+import { constructManagedQuery } from "./routes/internal-search";
 import { registerPointSearchRoute } from "./routes/point-search";
 import { registerSearchRoute } from "./routes/search";
 
@@ -48,8 +48,21 @@ export function createApp({
   registerSearchRoute(app, elasticsearch, logger, registry);
   registerPointSearchRoute(app, elasticsearch, logger, registry);
 
-  registerInternalSearchRoute(app, managedElasticsearch, logger, registry);
-  registerInternalPointSearchRoute(app, managedElasticsearch, logger, registry);
+  const managedSearchBackend = createManagedSearchBackend(managedElasticsearch);
+  registerSearchRoute(app, managedSearchBackend, logger, registry, {
+    path: "/internal/sok",
+    queryBuilder: constructManagedQuery,
+    metricName: "internal_sok_managed_query_duration_seconds",
+    metricHelp: "Time used to execute sok queries against the managed (ES9) Elasticsearch cluster",
+    logMessage: "Managed Elasticsearch query",
+  });
+  registerPointSearchRoute(app, managedSearchBackend, logger, registry, {
+    path: "/internal/punktsok",
+    metricName: "internal_punktsok_managed_query_duration_seconds",
+    metricHelp:
+      "Time used to execute punktsok queries against the managed (ES9) Elasticsearch cluster",
+    logMessage: "Managed Elasticsearch geo query",
+  });
 
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));

@@ -1,29 +1,13 @@
-import type { Hono } from "hono";
-import type { Logger } from "pino";
-import type { Registry } from "prom-client";
-import type { z } from "zod";
 import type { ElasticsearchQuery } from "../elasticsearch";
-import { badRequest, jsonResponse } from "../http";
-import { convertManagedDocument } from "../managed-document";
-import type { ManagedElasticsearchClient } from "../managed-elasticsearch";
-import { reprojectAddresses } from "../projection";
-import { createHistogram, measureTime } from "../utils/metrics";
-import { validateQuery } from "../utils/query-validation";
-import {
-  type AddressListOutput,
-  filterAddressOutput,
-  metadata,
-  rawQuery,
-  serializeAddress,
-} from "../utils/response";
-import { GeneralSearchSchema } from "./search";
+import { badRequest } from "../http";
+import type { GeneralSearchParameters } from "./search";
 
 /**
  * Query-builderen er bevisst duplisert fra dagens `/sok`: det nye indeks-
  * skjemaet har egne feltaliaser, og endringer her skal ikke endre legacy-
  * søkeflyten.
  */
-type ManagedSearchParameters = z.output<typeof GeneralSearchSchema>;
+type ManagedSearchParameters = GeneralSearchParameters;
 type AddressParameterName =
   | "adressenavn"
   | "adressetekst"
@@ -144,7 +128,7 @@ function createManagedGeneralSearchQuery(
   };
 }
 
-function constructManagedQuery(parameters: ManagedSearchParameters): ElasticsearchQuery {
+export function constructManagedQuery(parameters: ManagedSearchParameters): ElasticsearchQuery {
   const queries = createManagedAddressQueries(parameters);
   const generalSearchQuery = createManagedGeneralSearchQuery(parameters);
   if (generalSearchQuery) queries.unshift(generalSearchQuery);
@@ -152,59 +136,4 @@ function constructManagedQuery(parameters: ManagedSearchParameters): Elasticsear
   const [firstQuery, ...additionalQueries] = queries;
   if (!firstQuery) badRequest("Ingen søkeparametere oppgitt.");
   return additionalQueries.length === 0 ? firstQuery : { bool: { must: queries } };
-}
-
-function sanitizeRawQuery(query: string): string {
-  return query.replaceAll("\\", " ").replaceAll("~", "").replaceAll("/", " ").replaceAll("%22", "");
-}
-
-/**
- * Speiler `/sok` (`routes/search.ts`), men søker mot den nye ES9-klyngen
- * via `ManagedElasticsearchClient`. Query-byggingen er separat fordi
- * ES9-indeksen bruker andre felt enn legacy-indeksen.
- */
-export function registerInternalSearchRoute(
-  app: Hono,
-  managedElasticsearch: Pick<ManagedElasticsearchClient, "search">,
-  logger: Logger,
-  prometheus: Registry,
-): void {
-  const timeHistogram = createHistogram({
-    name: "internal_sok_managed_query_duration_seconds",
-    help: "Time used to execute sok queries against the managed (ES9) Elasticsearch cluster",
-    registers: [prometheus],
-  });
-  app.get("/internal/sok", validateQuery(GeneralSearchSchema), async (context) => {
-    const parameters = context.req.valid("query");
-    const query = constructManagedQuery(parameters);
-    logger.debug({ query }, "Managed Elasticsearch query");
-    const result = await measureTime(timeHistogram, () =>
-      // Queryen er typet med ES7-klientens DSL, mens managed-klienten er ES9.
-      // DSL-en sendes som JSON, men de genererte TypeScript-typene er ulike.
-      managedElasticsearch.search({
-        query,
-        from: parameters.side * parameters.treffPerSide,
-        size: parameters.treffPerSide,
-      } as unknown as Parameters<ManagedElasticsearchClient["search"]>[0]),
-    );
-
-    const addresses = reprojectAddresses(
-      result.hits.map((hit) => convertManagedDocument(hit._source)),
-      parameters.utkoordsys,
-    );
-    const output: AddressListOutput = {
-      metadata: metadata(
-        parameters.treffPerSide,
-        parameters.side,
-        result.total,
-        sanitizeRawQuery(rawQuery(context.req.url)),
-      ),
-      adresser: addresses.map(serializeAddress),
-    };
-    return jsonResponse(
-      filterAddressOutput(output, parameters.filtrer),
-      200,
-      parameters.asciiKompatibel,
-    );
-  });
 }
