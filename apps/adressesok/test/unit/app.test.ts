@@ -1,7 +1,34 @@
 import { describe, expect, test } from "bun:test";
-import { appWith, appWithCapturedLogs } from "./test.utils";
+import {
+  appWithCapturedLogs as appWithCapturedLogsForImplementation,
+  appWithSearchImplementation,
+  type SearchImplementation,
+} from "./test.utils";
 
-describe("HTTP application", () => {
+const implementations = [
+  {
+    implementation: "legacy",
+    searchPath: "/adresser/v1/sok",
+    pointSearchPath: "/adresser/v1/punktsok",
+  },
+  {
+    implementation: "managed",
+    searchPath: "/adresser/v1/internal/sok",
+    pointSearchPath: "/adresser/v1/internal/punktsok",
+  },
+] satisfies Array<{
+  implementation: SearchImplementation;
+  searchPath: string;
+  pointSearchPath: string;
+}>;
+
+describe.each(implementations)("HTTP ($implementation)", (parameters) => {
+  const { implementation, searchPath, pointSearchPath } = parameters;
+  const appWith = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
+    appWithSearchImplementation(elasticsearch, implementation);
+  const appWithCapturedLogs = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
+    appWithCapturedLogsForImplementation(elasticsearch, implementation);
+
   test("serves the search response in the legacy shape", async () => {
     const app = appWith({
       isReady: async () => true,
@@ -25,7 +52,7 @@ describe("HTTP application", () => {
         ],
       }),
     });
-    const response = await app.request("/adresser/v1/sok?sok=Kartverksveien%202&treffPerSide=1");
+    const response = await app.request(`${searchPath}?sok=Kartverksveien%202&treffPerSide=1`);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       metadata: {
@@ -74,9 +101,7 @@ describe("HTTP application", () => {
         hits: [{ _source: { nummer: 2, bokstav: "A" } }],
       }),
     });
-    const response = await app.request(
-      "/adresser/v1/sok?sok=x&filtrer=adresser.nummer,metadata.side",
-    );
+    const response = await app.request(`${searchPath}?sok=x&filtrer=adresser.nummer,metadata.side`);
     expect(await response.json()).toEqual({
       metadata: { side: 0 },
       adresser: [{ nummer: 2 }],
@@ -98,11 +123,46 @@ describe("HTTP application", () => {
       }),
     });
     const response = await app.request(
-      "/adresser/v1/sok?sok=x&filtrer=adresser.representasjonspunkt.lat",
+      `${searchPath}?sok=x&filtrer=adresser.representasjonspunkt.lat`,
     );
 
     expect(await response.json()).toEqual({
       adresser: [{ representasjonspunkt: { lat: 60.1 } }],
+    });
+  });
+
+  test("serves the same geo-search response shape", async () => {
+    const app = appWith({
+      isReady: async () => true,
+      search: async () => ({
+        total: 1,
+        hits: [
+          {
+            _source: {
+              adressetekst: "Kartverksveien 2",
+              nummer: 2,
+              poststed: "HØNEFOSS",
+              representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
+            },
+            sort: [12.3],
+          },
+        ],
+      }),
+    });
+    const response = await app.request(
+      `${pointSearchPath}?lat=60.145187&lon=10.2497&radius=100&treffPerSide=1`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      metadata: { totaltAntallTreff: 1, treffPerSide: 1 },
+      adresser: [
+        {
+          adressetekst: "Kartverksveien 2",
+          nummer: 2,
+          meterDistanseTilPunkt: 12.3,
+        },
+      ],
     });
   });
 
@@ -115,8 +175,8 @@ describe("HTTP application", () => {
       }),
     });
 
-    const ascii = await app.request("/adresser/v1/sok?sok=x");
-    const unicode = await app.request("/adresser/v1/sok?sok=x&asciiKompatibel=false");
+    const ascii = await app.request(`${searchPath}?sok=x`);
+    const unicode = await app.request(`${searchPath}?sok=x&asciiKompatibel=false`);
     expect(await ascii.text()).toContain("H\\u00d8NEFOSS");
     expect(await unicode.text()).toContain("HØNEFOSS");
   });
@@ -126,7 +186,7 @@ describe("HTTP application", () => {
       isReady: async () => true,
       search: async () => ({ total: 0, hits: [] }),
     });
-    const response = await app.request("/adresser/v1/sok?objtype=invalid");
+    const response = await app.request(`${searchPath}?objtype=invalid`);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       message: {
@@ -155,7 +215,7 @@ describe("HTTP application", () => {
     });
 
     const query = "sok=Lakkegata&fuzzy=true&fuzzy=false";
-    const response = await app.request(`/adresser/v1/sok?${query}`);
+    const response = await app.request(`${searchPath}?${query}`);
 
     expect(response.status).toBe(200);
     expect(capturedQuery).toEqual({
@@ -180,7 +240,7 @@ describe("HTTP application", () => {
       isReady: async () => true,
       search: async () => ({ total: 1, hits: [{ _source: { nummer: 2 } }] }),
     });
-    const response = await app.request("/adresser/v1/sok?sok=x&filtrer=metadata");
+    const response = await app.request(`${searchPath}?sok=x&filtrer=metadata`);
     expect(await response.json()).toEqual({
       metadata: {
         treffPerSide: 10,
@@ -199,7 +259,7 @@ describe("HTTP application", () => {
       isReady: async () => true,
       search: async () => ({ total: 0, hits: [] }),
     });
-    const response = await app.request("/adresser/v1/sok?sok=x&filtrer=bokstav");
+    const response = await app.request(`${searchPath}?sok=x&filtrer=bokstav`);
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({

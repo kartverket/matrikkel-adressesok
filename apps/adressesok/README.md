@@ -23,6 +23,17 @@
 
 Copy `.env.example` to `.env.local` or export the variables in your shell. Bun loads `.env.local` automatically.
 
+## Internal comparison endpoints
+
+`/adresser/v1/internal/sok` and `/adresser/v1/internal/punktsok` mirror `/sok` and `/punktsok`,
+but query the new Elasticsearch 9 cluster (`ES_URL`/`ES_API_KEY`) instead of the legacy cluster
+(`ELS_ADRESSER_URL`). They reuse the same validation, pagination, projection, and JSON response
+shape, so results can be diffed 1:1 against `/sok`/`/punktsok` while migrating. They are internal
+(not part of the public OpenAPI docs) and do not affect today's `/sok`/`/punktsok` flow.
+
+The ES9 index uses different field names (`@matrikkel/shared-schema`'s `ElasticAddressDocument`),
+so `undernummer` (which has no equivalent field there) is rejected with a 400 on these endpoints.
+
 ## Run locally
 
 Kjør kommandoene under fra denne mappen (`apps/adressesok`):

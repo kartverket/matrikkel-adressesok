@@ -5,8 +5,8 @@ import { ManagedElasticsearchClient } from "../../src/managed-elasticsearch";
 
 const logger = pino({ enabled: false });
 
-describe("managed Elasticsearch dummy search", () => {
-  test("queries the Databricks alias for one document", async () => {
+describe("managed Elasticsearch search", () => {
+  test("queries the configured alias and returns documents with their total", async () => {
     const document = { uuid: "adresse-1", adressetekst: "Testveien 1" };
     let path: string | undefined;
     let body: unknown;
@@ -28,10 +28,10 @@ describe("managed Elasticsearch dummy search", () => {
         ES_URL: `http://localhost:${server.port}`,
       });
       const client = new ManagedElasticsearchClient(config.managedElasticSearch, logger);
-      const result = await client.dummySearch();
-      expect(result).toBeDefined();
-      expect(result?.uuid).toBe(document.uuid);
-      expect(result?.adressetekst).toBe(document.adressetekst);
+      const result = await client.search({ query: { match_all: {} }, size: 1 });
+      expect(result.total).toBe(1);
+      expect(result.hits[0]?._source.uuid).toBe(document.uuid);
+      expect(result.hits[0]?._source.adressetekst).toBe(document.adressetekst);
       expect(path).toBe("/ed_adressesok-development/_search");
       expect(body).toMatchObject({ query: { match_all: {} }, size: 1 });
     } finally {
@@ -39,7 +39,7 @@ describe("managed Elasticsearch dummy search", () => {
     }
   });
 
-  test("returns undefined when the alias has no documents", async () => {
+  test("returns an empty result when the alias has no documents", async () => {
     const server = Bun.serve({
       port: 0,
       fetch: () =>
@@ -55,7 +55,10 @@ describe("managed Elasticsearch dummy search", () => {
         ES_URL: `http://localhost:${server.port}`,
       });
       const client = new ManagedElasticsearchClient(config.managedElasticSearch, logger);
-      expect(await client.dummySearch()).toBeUndefined();
+      expect(await client.search({ query: { match_all: {} }, size: 1 })).toEqual({
+        total: 0,
+        hits: [],
+      });
     } finally {
       server.stop(true);
     }

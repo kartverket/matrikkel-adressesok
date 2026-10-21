@@ -1,0 +1,147 @@
+import { describe, expect, test } from "bun:test";
+import pino from "pino";
+import { Registry } from "prom-client";
+import { createApp } from "../../src/app";
+import type { ElasticsearchSearchBody } from "../../src/elasticsearch";
+import type { ManagedSearchResult } from "../../src/managed-elasticsearch";
+
+const logger = pino({ enabled: false });
+
+const elasticsearch = {
+  isReady: async () => true,
+  search: async () => ({ total: 0, hits: [] }),
+};
+
+describe("internal managed search routes", () => {
+  test("/internal/sok builds a query against the new ES9 field names and maps the response", async () => {
+    let capturedQuery: unknown;
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async (body: { query?: unknown }) => {
+        capturedQuery = body.query;
+        return {
+          total: 1,
+          hits: [
+            {
+              _source: {
+                adressetekst: "Kartverksveien 2",
+                kommunenummer: "3007",
+                adressetype: "Vegadresse",
+                poststed: "HØNEFOSS",
+                oppdateringsdato: "2022-01-27T19:50:50.000Z",
+                representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
+                adressekode: "123",
+              },
+            },
+          ],
+        } as unknown as ManagedSearchResult;
+      },
+    };
+    const app = createApp({
+      elasticsearch,
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const response = await app.request(
+      "/adresser/v1/internal/sok?kommunenummer=3007&objtype=Vegadresse",
+    );
+    expect(response.status).toBe(200);
+    expect(capturedQuery).toEqual({
+      bool: {
+        must: [{ match: { kommunenummer: "3007" } }, { match: { adressetype: "Vegadresse" } }],
+      },
+    });
+    const body = (await response.json()) as { adresser: Array<Record<string, unknown>> };
+    expect(body.adresser).toEqual([
+      expect.objectContaining({
+        adressetekst: "Kartverksveien 2",
+        kommunenummer: "3007",
+        objtype: "Vegadresse",
+        poststed: "HØNEFOSS",
+        adressekode: 123,
+      }),
+    ]);
+  });
+
+  test("/internal/sok rejects undernummer, which has no equivalent in the new schema", async () => {
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async () => ({ total: 0, hits: [] }),
+    };
+    const app = createApp({
+      elasticsearch,
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const response = await app.request("/adresser/v1/internal/sok?undernummer=1");
+    expect(response.status).toBe(400);
+  });
+
+  test("/internal/punktsok reuses the geo query and maps distance onto the converted document", async () => {
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async () =>
+        ({
+          total: 1,
+          hits: [
+            {
+              _source: {
+                adressenavn: "Slottsplassen",
+                nummer: 1,
+                representasjonspunkt: { lat: 59.917, lon: 10.7277 },
+              },
+              sort: [12.3],
+            },
+          ],
+        }) as unknown as ManagedSearchResult,
+    };
+    const app = createApp({
+      elasticsearch,
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const response = await app.request(
+      "/adresser/v1/internal/punktsok?lat=59.917&lon=10.7277&radius=10",
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { adresser: Array<Record<string, unknown>> };
+    expect(body.adresser[0]).toMatchObject({
+      adressenavn: "Slottsplassen",
+      nummer: 1,
+      meterDistanseTilPunkt: 12.3,
+    });
+  });
+
+  test("does not change today's /sok or /punktsok flow", async () => {
+    let legacyQueryBody: ElasticsearchSearchBody | undefined;
+    const legacyElasticsearch = {
+      isReady: async () => true,
+      search: async (body: ElasticsearchSearchBody) => {
+        legacyQueryBody = body;
+        return { total: 0, hits: [] };
+      },
+    };
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async () => {
+        throw new Error("legacy /sok must not call the managed Elasticsearch client");
+      },
+    };
+    const app = createApp({
+      elasticsearch: legacyElasticsearch,
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const response = await app.request("/adresser/v1/sok?kommunenummer=3007");
+    expect(response.status).toBe(200);
+    expect(legacyQueryBody?.query).toEqual({ match: { adresse_kommunenummer: "3007" } });
+  });
+});

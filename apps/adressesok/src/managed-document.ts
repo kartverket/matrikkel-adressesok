@@ -1,0 +1,41 @@
+import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
+import type { AddressDocument } from "./elasticsearch";
+
+/**
+ * Oversetter et dokument fra den nye ES9-klyngen (`ElasticAddressDocument`,
+ * der feltnavn følger Databricks-kontrakten) til API-ets `AddressDocument`-
+ * form, som serialiseres av `utils/response.ts`.
+ *
+ * `undernummer` finnes ikke i det nye skjemaet (som har `seksjonsnummer`
+ * i stedet, et annet konsept) og mappes derfor til `null`.
+ */
+export function convertManagedDocument(document: ElasticAddressDocument): AddressDocument {
+  const adressekode =
+    document.adressekode === null || document.adressekode === ""
+      ? null
+      : Number(document.adressekode);
+
+  return {
+    adressenavn: document.adressenavn,
+    adressetekst: document.adressetekst,
+    adressetilleggsnavn: document.adressetilleggsnavn,
+    adressekode: adressekode !== null && Number.isFinite(adressekode) ? adressekode : null,
+    nummer: document.nummer,
+    bokstav: document.bokstav === null ? "" : document.bokstav,
+    adresse_kommunenummer: document.kommunenummer,
+    kommunenummer: document.kommunenummer,
+    kommunenavn: document.kommunenavn,
+    gardsnummer: document.gardsnummer,
+    bruksnummer: document.bruksnummer,
+    festenummer: document.festenummer,
+    undernummer: null,
+    bruksenhetsnummer: document.bruksenhetsnummer,
+    objtype: (document.adressetype ?? null) as "Matrikkeladresse" | "Vegadresse" | null,
+    poststed: document.poststed,
+    postnummer: document.postnummer,
+    adressetekstutenadressetilleggsnavn: document.adressetekstutenadressetilleggsnavn,
+    stedfestingverifisert: document.representasjonspunkt_stedfesting_verifisert,
+    representasjonspunkt: document.representasjonspunkt,
+    oppdateringsdato: document.oppdateringsdato,
+  };
+}

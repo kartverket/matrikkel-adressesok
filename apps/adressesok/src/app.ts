@@ -9,12 +9,14 @@ import { HttpError, jsonResponse } from "./http";
 import { createStructuredHonoLogger } from "./logger";
 import type { ManagedElasticsearchClient } from "./managed-elasticsearch";
 import openapiSpec from "./openapi.json" with { type: "json" };
+import { registerInternalPointSearchRoute } from "./routes/internal-point-search";
+import { registerInternalSearchRoute } from "./routes/internal-search";
 import { registerPointSearchRoute } from "./routes/point-search";
 import { registerSearchRoute } from "./routes/search";
 
 export interface AppDependencies {
   elasticsearch: Elasticsearch;
-  managedElasticsearch: Pick<ManagedElasticsearchClient, "isReady" | "dummySearch">;
+  managedElasticsearch: Pick<ManagedElasticsearchClient, "isReady" | "search">;
   logger: Logger;
   registry: Registry;
 }
@@ -46,6 +48,9 @@ export function createApp({
   registerSearchRoute(app, elasticsearch, logger, registry);
   registerPointSearchRoute(app, elasticsearch, logger, registry);
 
+  registerInternalSearchRoute(app, managedElasticsearch, logger, registry);
+  registerInternalPointSearchRoute(app, managedElasticsearch, logger, registry);
+
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));
 
@@ -64,10 +69,6 @@ export function createApp({
     if (!legacyReady || !managedReady) return c.json({ status: "DOWN" }, 503);
 
     return c.json({ status: "UP" });
-  });
-  app.get("/internal/dummySearch", async (c) => {
-    const document = await managedElasticsearch.dummySearch();
-    return c.json({ document: document ?? null });
   });
   app.get("/internal/metrics", printMetrics);
 
