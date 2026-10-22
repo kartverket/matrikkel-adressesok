@@ -107,7 +107,9 @@ export function createDatabricksSource(
     const table = getTable();
     const select = COLUMNS.join(", ");
     const sql = await getSession();
-    const operation = await sql.executeStatement(`select ${select} from ${table}`);
+    const operation = await sql.executeStatement(
+      `select ${select} from ${table} order by uuid asc`,
+    );
     try {
       for await (const row of operation.iterateRows({
         maxRows: ROWS_PER_BATCH_FROM_DATABRICKS,
