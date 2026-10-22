@@ -1,49 +1,14 @@
 import type { ElasticsearchQuery } from "../elasticsearch";
 import { badRequest } from "../http";
-import type { GeneralSearchParameters } from "./search";
+import { addressParameters, type GeneralSearchParameters } from "./search";
 
 /**
  * Query-builderen er bevisst duplisert fra dagens `/sok`: det nye indeks-
  * skjemaet har egne feltaliaser, og endringer her skal ikke endre legacy-
  * søkeflyten.
  */
-type ManagedSearchParameters = GeneralSearchParameters;
-type AddressParameterName =
-  | "adressenavn"
-  | "adressetekst"
-  | "adressetilleggsnavn"
-  | "adressekode"
-  | "nummer"
-  | "bokstav"
-  | "kommunenummer"
-  | "kommunenavn"
-  | "gardsnummer"
-  | "bruksnummer"
-  | "festenummer"
-  | "undernummer"
-  | "bruksenhetsnummer"
-  | "objtype"
-  | "poststed"
-  | "postnummer";
-
-const addressParameterNames: AddressParameterName[] = [
-  "adressenavn",
-  "adressetekst",
-  "adressetilleggsnavn",
-  "adressekode",
-  "nummer",
-  "bokstav",
-  "kommunenummer",
-  "kommunenavn",
-  "gardsnummer",
-  "bruksnummer",
-  "festenummer",
-  "undernummer",
-  "bruksenhetsnummer",
-  "objtype",
-  "poststed",
-  "postnummer",
-];
+type AddressParameterName = keyof typeof addressParameters;
+const addressParameterNames = Object.keys(addressParameters) as AddressParameterName[];
 const textFields = new Set([
   "kommunenavn",
   "kommunenummer",
@@ -93,7 +58,7 @@ function applyFuzziness(term: string, fuzzy: boolean): string {
   return `${term}~`;
 }
 
-function createManagedAddressQueries(parameters: ManagedSearchParameters): ElasticsearchQuery[] {
+function createManagedAddressQueries(parameters: GeneralSearchParameters): ElasticsearchQuery[] {
   const queries: ElasticsearchQuery[] = [];
   for (const key of addressParameterNames) {
     const value = parameters[key];
@@ -105,7 +70,7 @@ function createManagedAddressQueries(parameters: ManagedSearchParameters): Elast
 }
 
 function createManagedGeneralSearchQuery(
-  parameters: ManagedSearchParameters,
+  parameters: GeneralSearchParameters,
 ): ElasticsearchQuery | undefined {
   const operator = parameters.sokemodus ?? "AND";
   const searchTerms = replaceIllegalCharacters(parameters.sok ?? "")
@@ -128,7 +93,7 @@ function createManagedGeneralSearchQuery(
   };
 }
 
-export function constructManagedQuery(parameters: ManagedSearchParameters): ElasticsearchQuery {
+export function constructManagedQuery(parameters: GeneralSearchParameters): ElasticsearchQuery {
   const queries = createManagedAddressQueries(parameters);
   const generalSearchQuery = createManagedGeneralSearchQuery(parameters);
   if (generalSearchQuery) queries.unshift(generalSearchQuery);

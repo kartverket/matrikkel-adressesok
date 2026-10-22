@@ -21,7 +21,7 @@ import {
   serializeAddress,
 } from "../utils/response";
 
-const addressParameters = {
+export const addressParameters = {
   adressenavn: z.string().optional(),
   adressetekst: z.string().optional(),
   adressetilleggsnavn: z.string().optional(),
