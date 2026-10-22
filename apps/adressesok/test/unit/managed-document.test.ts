@@ -56,7 +56,23 @@ describe("convertManagedDocument", () => {
     expect(convertManagedDocument({ ...document, adressekode: null }).adressekode).toBeNull();
   });
 
-  test("mapper manglende bokstav til tom streng som legacy API-et", () => {
+  test("viser manglende bokstav som tom streng for vegadresse og null for matrikkeladresse", () => {
     expect(convertManagedDocument({ ...document, bokstav: null }).bokstav).toBe("");
+    expect(convertManagedDocument({ ...document, bokstav: "" }).bokstav).toBe("");
+    expect(
+      convertManagedDocument({ ...document, adressetype: "Matrikkeladresse", bokstav: null })
+        .bokstav,
+    ).toBeNull();
+  });
+
+  test("viser bruksenhetsnummer bare når det er flere bruksenheter", () => {
+    expect(
+      convertManagedDocument({ ...document, bruksenhetsnummer: [] }).bruksenhetsnummer,
+    ).toEqual([]);
+    expect(convertManagedDocument(document).bruksenhetsnummer).toEqual([]);
+    expect(
+      convertManagedDocument({ ...document, bruksenhetsnummer: ["H0101", "H0201"] })
+        .bruksenhetsnummer,
+    ).toEqual(["H0101", "H0201"]);
   });
 });

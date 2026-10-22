@@ -31,6 +31,7 @@ describe("internal managed search routes", () => {
                 oppdateringsdato: "2022-01-27T19:50:50.000Z",
                 representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
                 adressekode: "123",
+                bruksenhetsnummer: [],
               },
             },
           ],
