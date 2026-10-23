@@ -79,7 +79,7 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
     adressekode: address.adressekode == null ? address.adressekode : String(address.adressekode),
     nummer: address.nummer,
     bokstav: address.bokstav,
-    bruksenhetsnummer: address.bruksenhetsnummer,
+    bruksenhetsnummer: address.bruksenhetsnummer ?? [],
     kommunenavn: address.kommunenavn,
     kommunenummer: address.adresse_kommunenummer ?? address.kommunenummer,
     postnummer: address.postnummer,
