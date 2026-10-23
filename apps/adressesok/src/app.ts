@@ -8,13 +8,15 @@ import type { Elasticsearch } from "./elasticsearch";
 import { HttpError, jsonResponse } from "./http";
 import { createStructuredHonoLogger } from "./logger";
 import type { ManagedElasticsearchClient } from "./managed-elasticsearch";
+import { createManagedSearchBackend } from "./managed-search-backend";
 import openapiSpec from "./openapi.json" with { type: "json" };
+import { constructManagedQuery } from "./routes/internal-search";
 import { registerPointSearchRoute } from "./routes/point-search";
 import { registerSearchRoute } from "./routes/search";
 
 export interface AppDependencies {
   elasticsearch: Elasticsearch;
-  managedElasticsearch: Pick<ManagedElasticsearchClient, "isReady" | "dummySearch">;
+  managedElasticsearch: Pick<ManagedElasticsearchClient, "isReady" | "search">;
   logger: Logger;
   registry: Registry;
 }
@@ -46,6 +48,22 @@ export function createApp({
   registerSearchRoute(app, elasticsearch, logger, registry);
   registerPointSearchRoute(app, elasticsearch, logger, registry);
 
+  const managedSearchBackend = createManagedSearchBackend(managedElasticsearch);
+  registerSearchRoute(app, managedSearchBackend, logger, registry, {
+    path: "/internal/sok",
+    queryBuilder: constructManagedQuery,
+    metricName: "internal_sok_managed_query_duration_seconds",
+    metricHelp: "Time used to execute sok queries against the managed (ES9) Elasticsearch cluster",
+    logMessage: "Managed Elasticsearch query",
+  });
+  registerPointSearchRoute(app, managedSearchBackend, logger, registry, {
+    path: "/internal/punktsok",
+    metricName: "internal_punktsok_managed_query_duration_seconds",
+    metricHelp:
+      "Time used to execute punktsok queries against the managed (ES9) Elasticsearch cluster",
+    logMessage: "Managed Elasticsearch geo query",
+  });
+
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));
 
@@ -64,10 +82,6 @@ export function createApp({
     if (!legacyReady || !managedReady) return c.json({ status: "DOWN" }, 503);
 
     return c.json({ status: "UP" });
-  });
-  app.get("/internal/dummySearch", async (c) => {
-    const document = await managedElasticsearch.dummySearch();
-    return c.json({ document: document ?? null });
   });
   app.get("/internal/metrics", printMetrics);
 

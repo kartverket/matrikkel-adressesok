@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import type { Logger } from "pino";
 import type { Registry } from "prom-client";
 import { z } from "zod";
-import type { Elasticsearch, ElasticsearchQuery } from "../elasticsearch";
+import type { ElasticsearchQuery, SearchBackend } from "../elasticsearch";
 import { badRequest, jsonResponse } from "../http";
 import { reprojectAddresses } from "../projection";
 import { createHistogram, measureTime } from "../utils/metrics";
@@ -21,7 +21,7 @@ import {
   serializeAddress,
 } from "../utils/response";
 
-const addressParameters = {
+export const addressParameters = {
   adressenavn: z.string().optional(),
   adressetekst: z.string().optional(),
   adressetilleggsnavn: z.string().optional(),
@@ -68,7 +68,7 @@ export const GeneralSearchSchema = z
   })
   .superRefine(enforcePaginationLimit);
 
-type GeneralSearchParameters = z.output<typeof GeneralSearchSchema>;
+export type GeneralSearchParameters = z.output<typeof GeneralSearchSchema>;
 type AddressParameterName = keyof typeof addressParameters;
 const addressParameterNames = Object.keys(addressParameters) as AddressParameterName[];
 const textFields = new Set([
@@ -181,21 +181,28 @@ export function constructGeneralQuery(parameters: GeneralSearchParameters): Elas
 
 export function registerSearchRoute(
   app: Hono,
-  elasticsearch: Elasticsearch,
+  searchBackend: SearchBackend,
   logger: Logger,
   prometheus: Registry,
+  options: {
+    path?: string;
+    queryBuilder?: (parameters: GeneralSearchParameters) => ElasticsearchQuery;
+    metricName?: string;
+    metricHelp?: string;
+    logMessage?: string;
+  } = {},
 ): void {
   const timeHistogram = createHistogram({
-    name: "sok_query_duration_seconds",
-    help: "Time used to execute sok queries",
+    name: options.metricName ?? "sok_query_duration_seconds",
+    help: options.metricHelp ?? "Time used to execute sok queries",
     registers: [prometheus],
   });
-  app.get("/sok", validateQuery(GeneralSearchSchema), async (context) => {
+  app.get(options.path ?? "/sok", validateQuery(GeneralSearchSchema), async (context) => {
     const parameters = context.req.valid("query");
-    const query = constructGeneralQuery(parameters);
-    logger.debug({ query }, "Elasticsearch query");
+    const query = (options.queryBuilder ?? constructGeneralQuery)(parameters);
+    logger.debug({ query }, options.logMessage ?? "Elasticsearch query");
     const result = await measureTime(timeHistogram, () =>
-      elasticsearch.search({
+      searchBackend.search({
         query,
         from: parameters.side * parameters.treffPerSide,
         size: parameters.treffPerSide,

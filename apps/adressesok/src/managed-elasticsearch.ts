@@ -1,8 +1,31 @@
-import { Client } from "@elastic/elasticsearch9";
+import { Client, type estypes } from "@elastic/elasticsearch9";
 import { HttpConnection } from "@elastic/transport";
 import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
 import type { Logger } from "pino";
 import type { AppConfig } from "./config";
+
+export type ManagedElasticsearchQuery = estypes.QueryDslQueryContainer;
+
+/**
+ * Søkebody for den nye ES9-klyngen. Det native ES9-klientgrensesnittet
+ * flater ut `query`/`from`/`size`/`sort`/`_source` på toppnivå (i
+ * motsetning til ES7-klienten, som pakker dem inn i `body`), så denne
+ * typen speiler det.
+ */
+export type ManagedElasticsearchSearchBody = Pick<
+  estypes.SearchRequest,
+  "query" | "from" | "size" | "sort" | "_source"
+>;
+
+export type ManagedSearchHit = {
+  _source: ElasticAddressDocument;
+  sort?: number[];
+};
+
+export type ManagedSearchResult = {
+  total: number;
+  hits: ManagedSearchHit[];
+};
 
 export class ManagedElasticsearchClient {
   private readonly client: Client;
@@ -18,15 +41,16 @@ export class ManagedElasticsearchClient {
     });
   }
 
-  async dummySearch(): Promise<ElasticAddressDocument | undefined> {
+  async search(body: ManagedElasticsearchSearchBody): Promise<ManagedSearchResult> {
     const response = await this.client.search<ElasticAddressDocument>({
       index: this.config.alias,
-      query: { match_all: {} },
-      size: 1,
+      ...body,
     });
-    const hit = response.hits.hits[0];
-    if (hit && !hit._source) throw new Error("Elasticsearch search hit is missing _source");
-    return hit?._source;
+    const total =
+      typeof response.hits.total === "number"
+        ? response.hits.total
+        : (response.hits.total?.value ?? 0);
+    return { total, hits: response.hits.hits as ManagedSearchHit[] };
   }
 
   async isReady(): Promise<boolean> {

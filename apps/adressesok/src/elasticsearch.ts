@@ -18,6 +18,10 @@ export type SearchResult = {
   hits: SearchHit[];
 };
 
+export interface SearchBackend {
+  search(body: ElasticsearchSearchBody): Promise<SearchResult>;
+}
+
 type ElasticsearchSearchResponse = {
   hits: {
     total: number | { value: number; relation: string };
