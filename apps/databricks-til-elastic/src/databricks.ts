@@ -105,9 +105,12 @@ export function createDatabricksSource(
 
   async function* rows(): AsyncGenerator<DatabricksRow> {
     const table = getTable();
-    const select = COLUMNS.join(", ");
     const sql = await getSession();
-    const operation = await sql.executeStatement(`select ${select} from ${table}`);
+
+    const operation = await sql.executeStatement(buildRowsQuery(table), {
+      // Avoid expiring CloudFetch links during long-running index loads.
+      useCloudFetch: false,
+    });
     try {
       for await (const row of operation.iterateRows({
         maxRows: ROWS_PER_BATCH_FROM_DATABRICKS,
@@ -140,6 +143,11 @@ export function createDatabricksSource(
   }
 
   return { countRows, rows, close };
+}
+
+export function buildRowsQuery(table: string): string {
+  const select = COLUMNS.join(", ");
+  return `select ${select} from ${table} order by uuid asc`;
 }
 
 function getTable(): string {
