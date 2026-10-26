@@ -147,7 +147,7 @@ export function createDatabricksSource(
 
 export function buildRowsQuery(table: string): string {
   const select = COLUMNS.join(", ");
-  return `select ${select} from ${table} order by uuid asc`;
+  return `select ${select} from ${table} order by adressetekst asc, uuid asc`;
 }
 
 function getTable(): string {

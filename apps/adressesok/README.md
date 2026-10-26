@@ -32,7 +32,7 @@ shape, so results can be diffed 1:1 against `/sok`/`/punktsok` while migrating. 
 (not part of the public OpenAPI docs) and do not affect today's `/sok`/`/punktsok` flow.
 
 The ES9 index uses different field names (`@matrikkel/shared-schema`'s `ElasticAddressDocument`),
-so `undernummer` (which has no equivalent field there) is rejected with a 400 on these endpoints.
+but `undernummer` is indexed and can be used as a search parameter on these endpoints.
 
 ## Run locally
 

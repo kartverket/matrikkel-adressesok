@@ -25,6 +25,7 @@ const base: DatabricksRow = {
   bruksnummer: 0,
   festenummer: 0,
   seksjonsnummer: 0,
+  undernummer: null,
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
   atkomstpunkt: { sommer: point, vinter: point, generell: point },
@@ -40,6 +41,11 @@ describe("rowToDocument", () => {
     expect(document.representasjonspunkt).toEqual(point);
     expect(document.atkomstpunkt).toEqual(base.atkomstpunkt);
     expect(document["@timestamp"]).toBe(timestamp);
+  });
+
+  it("beholder undernummer for matrikkeladresse og null for vegadresse", () => {
+    expect(rowToDocument({ ...base, undernummer: 2 }, timestamp).undernummer).toBe(2);
+    expect(rowToDocument(base, timestamp).undernummer).toBeNull();
   });
 
   it("beholder null for sommer og vinter og et gyldig generelt punkt", () => {
