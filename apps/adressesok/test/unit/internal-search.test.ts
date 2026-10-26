@@ -87,6 +87,27 @@ describe("internal managed search routes", () => {
     expect(capturedQuery).toEqual({ match: { undernummer: 1 } });
   });
 
+  test("/internal/sok treats an empty bokstav as addresses without a letter", async () => {
+    let capturedQuery: unknown;
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async (body: { query?: unknown }) => {
+        capturedQuery = body.query;
+        return { total: 0, hits: [] };
+      },
+    };
+    const app = createApp({
+      elasticsearch,
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const response = await app.request("/adresser/v1/internal/sok?nummer=17&bokstav=");
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(capturedQuery)).toContain('"must_not":{"exists":{"field":"bokstav"}}');
+  });
+
   test("isReady depends on the legacy Elasticsearch only", async () => {
     const managedElasticsearch = {
       isReady: async () => {
