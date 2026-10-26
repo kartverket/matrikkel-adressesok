@@ -21,6 +21,7 @@
     "bruksnummer": 2,
     "festenummer": 0,
     "seksjonsnummer": 0,
+    "undernummer": 1,
     "representasjonspunkt": { "lat": 59.91, "lon": 10.75 },
     "representasjonspunkt_stedfesting_verifisert": true,
     "atkomstpunkt": {
@@ -51,6 +52,7 @@
     "bruksnummer": 0,
     "festenummer": 0,
     "seksjonsnummer": 0,
+    "undernummer": null,
     "representasjonspunkt": { "lat": 60.39, "lon": 5.32 },
     "representasjonspunkt_stedfesting_verifisert": true,
     "atkomstpunkt": {
@@ -81,6 +83,7 @@
     "bruksnummer": 0,
     "festenummer": 0,
     "seksjonsnummer": 0,
+    "undernummer": null,
     "representasjonspunkt": { "lat": 69.65, "lon": 18.96 },
     "representasjonspunkt_stedfesting_verifisert": false,
     "atkomstpunkt": {

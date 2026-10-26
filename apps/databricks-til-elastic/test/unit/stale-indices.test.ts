@@ -4,7 +4,7 @@ import { newIndexName } from "../../src/index-name";
 import { staleIndicesWithoutAlias } from "../../src/stale-indices";
 
 describe("staleIndicesWithoutAlias", () => {
-  it("velger bare indekser fra eget miljø som er minst 48 timer gamle og ikke har alias", () => {
+  it("velger bare indekser fra eget miljø som er minst 7 dager gamle og ikke har alias", () => {
     const old = `${INDEX_PREFIX}-2026-10-17-000000000-utc`;
     const boundary = `${INDEX_PREFIX}-2026-10-17-120000000-utc`;
     const recent = `${INDEX_PREFIX}-2026-10-18-000000000-utc`;
@@ -19,7 +19,7 @@ describe("staleIndicesWithoutAlias", () => {
       [`${INDEX_PREFIX}-2026-10-15-000000000-utc`]: { aliases: { ed_adressesok: {} } },
     };
 
-    expect(staleIndicesWithoutAlias(indices, new Date("2026-10-19T12:00:00.000Z"))).toEqual([
+    expect(staleIndicesWithoutAlias(indices, new Date("2026-10-24T12:00:00.000Z"))).toEqual([
       old,
       boundary,
     ]);
@@ -29,10 +29,10 @@ describe("staleIndicesWithoutAlias", () => {
     const name = newIndexName(new Date("2026-10-17T12:00:00.123Z"));
     expect(name).toBe(`${INDEX_PREFIX}-2026-10-17-120000123-utc`);
     expect(
-      staleIndicesWithoutAlias({ [name]: { aliases: {} } }, new Date("2026-10-19T12:00:00.122Z")),
+      staleIndicesWithoutAlias({ [name]: { aliases: {} } }, new Date("2026-10-24T12:00:00.122Z")),
     ).toEqual([]);
     expect(
-      staleIndicesWithoutAlias({ [name]: { aliases: {} } }, new Date("2026-10-19T12:00:00.123Z")),
+      staleIndicesWithoutAlias({ [name]: { aliases: {} } }, new Date("2026-10-24T12:00:00.123Z")),
     ).toEqual([name]);
   });
 });

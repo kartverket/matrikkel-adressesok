@@ -5,9 +5,6 @@ import type { AddressDocument } from "./elasticsearch";
  * Oversetter et dokument fra den nye ES9-klyngen (`ElasticAddressDocument`,
  * der feltnavn følger Databricks-kontrakten) til API-ets `AddressDocument`-
  * form, som serialiseres av `utils/response.ts`.
- *
- * `undernummer` finnes ikke i det nye skjemaet (som har `seksjonsnummer`
- * i stedet, et annet konsept) og mappes derfor til `null`.
  */
 export function convertManagedDocument(document: ElasticAddressDocument): AddressDocument {
   const adressekode =
@@ -28,7 +25,7 @@ export function convertManagedDocument(document: ElasticAddressDocument): Addres
     gardsnummer: document.gardsnummer,
     bruksnummer: document.bruksnummer,
     festenummer: document.festenummer,
-    undernummer: null,
+    undernummer: document.undernummer,
     bruksenhetsnummer: document.bruksenhetsnummer.length === 1 ? [] : document.bruksenhetsnummer,
     objtype: (document.adressetype ?? null) as "Matrikkeladresse" | "Vegadresse" | null,
     poststed: document.poststed,

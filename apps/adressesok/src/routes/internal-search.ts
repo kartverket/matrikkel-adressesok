@@ -18,6 +18,29 @@ const textFields = new Set([
   "postnummer",
 ]);
 const exactPhraseFields = new Set(["adressetekst", "adressenavn"]);
+// Uten eksplisitte felt søker simple_query_string i alle felt, og wildcard
+// (f.eks. "5*") treffer da uvedkommende felt.
+const generalSearchFields = [
+  "adressetekst",
+  "adressetekstutenadressetilleggsnavn",
+  "adressenavn",
+  "adressenavn.exact",
+  "adressetilleggsnavn",
+  "adressetilleggsnavn.exact",
+  "kortnavn",
+  "kortnavn.exact",
+  "kommunenavn",
+  "kommunenavn.exact",
+  "kommunenummer",
+  "poststed",
+  "poststed.exact",
+  "postnummer",
+  "nummer",
+  "bokstav",
+  "gardsnummer",
+  "bruksnummer",
+  "festenummer",
+];
 const fieldAliases: Partial<Record<AddressParameterName, string>> = {
   objtype: "adressetype",
 };
@@ -63,7 +86,6 @@ function createManagedAddressQueries(parameters: GeneralSearchParameters): Elast
   for (const key of addressParameterNames) {
     const value = parameters[key];
     if (value === undefined) continue;
-    if (key === "undernummer") badRequest("Søkeparameteret undernummer støttes ikke.");
     queries.push(queryForField(fieldAliases[key] ?? key, value));
   }
   return queries;
@@ -88,6 +110,8 @@ function createManagedGeneralSearchQuery(
     simple_query_string: {
       query: generalSearch,
       default_operator: operator,
+      fields: generalSearchFields,
+      lenient: true,
       fuzzy_max_expansions: 100,
     },
   };
