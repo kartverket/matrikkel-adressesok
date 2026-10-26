@@ -1,3 +1,4 @@
+import { ElasticAddressDocumentSchema } from "@matrikkel/shared-schema";
 import type { ElasticsearchQuery } from "../elasticsearch";
 import { badRequest } from "../http";
 import { addressParameters, type GeneralSearchParameters } from "./search";
@@ -19,28 +20,34 @@ const textFields = new Set([
 ]);
 const exactPhraseFields = new Set(["adressetekst", "adressenavn"]);
 // Uten eksplisitte felt søker simple_query_string i alle felt, og wildcard
-// (f.eks. "5*") treffer da uvedkommende felt.
-const generalSearchFields = [
-  "adressetekst",
-  "adressetekstutenadressetilleggsnavn",
+// (f.eks. "5*") treffer da uvedkommende felter. Feltene hentes fra dokumentskjemaet,
+// minus de som ikke er søkbar tekst eller nummer.
+const notGeneralSearchable = new Set([
+  "uuid",
+  "adresse_id",
+  "adressetype",
+  "oppdateringsdato",
+  "adressekode",
+  "bruksenhetsnummer",
+  "seksjonsnummer",
+  "undernummer",
+  "representasjonspunkt",
+  "representasjonspunkt_stedfesting_verifisert",
+  "atkomstpunkt",
+  "@version",
+  "@timestamp",
+]);
+// Tekstfelt med `.exact`-subfelt i indeksen (uten stemming)
+const fieldsWithExactSubfield = new Set([
   "adressenavn",
-  "adressenavn.exact",
   "adressetilleggsnavn",
-  "adressetilleggsnavn.exact",
   "kortnavn",
-  "kortnavn.exact",
   "kommunenavn",
-  "kommunenavn.exact",
-  "kommunenummer",
   "poststed",
-  "poststed.exact",
-  "postnummer",
-  "nummer",
-  "bokstav",
-  "gardsnummer",
-  "bruksnummer",
-  "festenummer",
-];
+]);
+const generalSearchFields = Object.keys(ElasticAddressDocumentSchema.shape)
+  .filter((field) => !notGeneralSearchable.has(field))
+  .flatMap((field) => (fieldsWithExactSubfield.has(field) ? [field, `${field}.exact`] : [field]));
 const fieldAliases: Partial<Record<AddressParameterName, string>> = {
   objtype: "adressetype",
 };
