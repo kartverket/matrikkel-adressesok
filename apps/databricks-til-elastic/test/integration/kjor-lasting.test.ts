@@ -95,7 +95,7 @@ describe("runLoad mot lokal Elasticsearch", () => {
     expect(generalAccessPoints).toBe(66);
   }, 30_000);
 
-  it("bytter aliaset til en ny indeks og lar den gamle stå i 48 timer", async () => {
+  it("bytter aliaset til en ny indeks og lar den gamle stå i 7 dager", async () => {
     const indicesBeforeSecondRun = await indicesWithAlias();
 
     await runLoad(source);

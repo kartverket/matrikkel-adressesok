@@ -66,10 +66,14 @@ describe("internal managed search routes", () => {
     ]);
   });
 
-  test("/internal/sok rejects undernummer, which has no equivalent in the new schema", async () => {
+  test("/internal/sok searches on undernummer", async () => {
+    let capturedQuery: unknown;
     const managedElasticsearch = {
       isReady: async () => true,
-      search: async () => ({ total: 0, hits: [] }),
+      search: async (body: { query?: unknown }) => {
+        capturedQuery = body.query;
+        return { total: 0, hits: [] };
+      },
     };
     const app = createApp({
       elasticsearch,
@@ -79,7 +83,8 @@ describe("internal managed search routes", () => {
     });
 
     const response = await app.request("/adresser/v1/internal/sok?undernummer=1");
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
+    expect(capturedQuery).toEqual({ match: { undernummer: 1 } });
   });
 
   test("does not change today's /sok or /punktsok flow", async () => {

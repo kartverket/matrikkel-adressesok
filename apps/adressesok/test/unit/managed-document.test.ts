@@ -26,6 +26,7 @@ const document: ElasticAddressDocument = {
   bruksnummer: 0,
   festenummer: 0,
   seksjonsnummer: 0,
+  undernummer: null,
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
   atkomstpunkt: { sommer: point, vinter: point, generell: point },
@@ -49,6 +50,13 @@ describe("convertManagedDocument", () => {
       representasjonspunkt: point,
       undernummer: null,
     });
+  });
+
+  test("sender undernummer videre for matrikkeladresse", () => {
+    expect(
+      convertManagedDocument({ ...document, adressetype: "Matrikkeladresse", undernummer: 2 })
+        .undernummer,
+    ).toBe(2);
   });
 
   test("behandler tom/null adressekode som null", () => {

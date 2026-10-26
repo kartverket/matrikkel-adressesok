@@ -220,13 +220,20 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
     const response = await app.request(`${searchPath}?${query}`);
 
     expect(response.status).toBe(200);
-    expect(capturedQuery).toEqual({
+    const expectedQuery = {
       simple_query_string: {
         query: "Lakkegata~",
         default_operator: "AND",
         fuzzy_max_expansions: 100,
       },
-    });
+    };
+    if (implementation === "managed") {
+      // Managed søk begrenser seg til eksplisitte felt (se internal-search.ts)
+      expect(capturedQuery).toMatchObject(expectedQuery);
+      expect(capturedQuery).toHaveProperty("simple_query_string.fields");
+    } else {
+      expect(capturedQuery).toEqual(expectedQuery);
+    }
     expect(searchCalls).toBe(1);
     expect(await response.json()).toMatchObject({
       metadata: {

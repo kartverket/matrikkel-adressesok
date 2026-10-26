@@ -2,7 +2,7 @@ import { INDEX_PREFIX } from "./config";
 import { indexTimestamp } from "./index-name";
 import { logger } from "./logger";
 
-const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function cleanUpStaleIndices(activeIndex: string): Promise<void> {
   try {

@@ -37,6 +37,7 @@ export const ElasticAddressDocumentSchema = z.object({
   bruksnummer: z.number(),
   festenummer: z.number(),
   seksjonsnummer: z.number(),
+  undernummer: z.number().nullable(),
   representasjonspunkt: z.object({ lat: z.number(), lon: z.number() }),
   representasjonspunkt_stedfesting_verifisert: z.boolean(),
   atkomstpunkt: z.object({

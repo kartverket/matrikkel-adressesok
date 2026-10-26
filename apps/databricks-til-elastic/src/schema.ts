@@ -44,6 +44,7 @@ export const DatabricksRowSchema = z
     bruksnummer: z.number(),
     festenummer: z.number(),
     seksjonsnummer: z.number(),
+    undernummer: z.number().nullable(),
     representasjonspunkt: PointSchema,
     representasjonspunkt_stedfesting_verifisert: z.boolean(),
     atkomstpunkt: z.object({
@@ -83,6 +84,7 @@ export const COLUMNS: ReadonlyArray<keyof DatabricksRow> = [
   "bruksnummer",
   "festenummer",
   "seksjonsnummer",
+  "undernummer",
   "representasjonspunkt",
   "representasjonspunkt_stedfesting_verifisert",
   "atkomstpunkt",
@@ -126,11 +128,15 @@ export function rowToDocument(row: DatabricksRow, timestamp: string): AddressDoc
   return result.data;
 }
 
-const tekst: estypes.MappingProperty = {
+// Speiler produksjonsindeksen: stemmet felt med `.exact` (kun lowercase)
+const norskTekst: estypes.MappingProperty = {
   type: "text",
-  analyzer: "adresse",
-  fields: { raw: { type: "keyword" } },
+  analyzer: "norwegian",
+  fields: { exact: { type: "text", analyzer: "norwegian_exact" } },
 };
+
+// `adressetekst*` er i produksjon uten egen analysator (standard)
+const standardTekst: estypes.MappingProperty = { type: "text" };
 
 /**
  * `dynamic: strict` gjør at en ny kolonne i databasen feiler synlig
@@ -141,7 +147,23 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
     index: { number_of_shards: 1, number_of_replicas: 0, refresh_interval: "-1" },
     analysis: {
       analyzer: {
-        adresse: { type: "custom", tokenizer: "standard", filter: ["lowercase", "asciifolding"] },
+        // Kopi av analysatorene i produksjonsklyngen (index template
+        // `adressesok`), uten asciifolding
+        norwegian: {
+          type: "custom",
+          tokenizer: "standard",
+          filter: ["lowercase", "norwegian_stop", "norwegian_keywords", "norwegian_stemmer"],
+        },
+        norwegian_exact: {
+          type: "custom",
+          tokenizer: "standard",
+          filter: ["lowercase"],
+        },
+      },
+      filter: {
+        norwegian_stop: { type: "stop", stopwords: "_norwegian_" },
+        norwegian_keywords: { type: "keyword_marker", keywords: ["eksempel"] },
+        norwegian_stemmer: { type: "stemmer", language: "norwegian" },
       },
     },
   },
@@ -166,19 +188,20 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
           generell: { type: "geo_point" },
         },
       },
-      adressetekst: tekst,
-      adressetekstutenadressetilleggsnavn: tekst,
-      adressetilleggsnavn: tekst,
-      adressenavn: tekst,
-      kortnavn: tekst,
-      kommunenavn: tekst,
-      poststed: tekst,
+      adressetekst: standardTekst,
+      adressetekstutenadressetilleggsnavn: standardTekst,
+      adressetilleggsnavn: norskTekst,
+      adressenavn: norskTekst,
+      kortnavn: norskTekst,
+      kommunenavn: norskTekst,
+      poststed: norskTekst,
       postnummer: { type: "keyword" },
       kommunenummer: { type: "keyword" },
       adressekode: { type: "keyword" },
       bokstav: { type: "keyword" },
       bruksenhetsnummer: { type: "keyword" },
       seksjonsnummer: { type: "integer" },
+      undernummer: { type: "integer" },
       gardsnummer: { type: "integer" },
       bruksnummer: { type: "integer" },
       festenummer: { type: "integer" },

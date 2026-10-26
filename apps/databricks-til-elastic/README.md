@@ -12,7 +12,7 @@ på over 10 % stopper importen.
 Først når kontrollene er bestått, byttes aliaset atomisk. Ved feil før
 aliasbyttet blir gammel indeks værende i bruk; den nye beholdes for feilsøking.
 Etter aliasbyttet slettes bare indekser med jobbens eget navnemønster og
-miljøsuffiks som er **minst 48 timer gamle**, og som **ikke har noe alias**.
+miljøsuffiks som er **minst 7 dager gamle**, og som **ikke har noe alias**.
 Feil under opprydding logges som advarsel og endrer ikke resultatet av en
 vellykket import.
 
