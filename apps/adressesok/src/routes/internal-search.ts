@@ -79,8 +79,18 @@ function queryForField(key: string, rawValue: string | number): ElasticsearchQue
   if (typeof rawValue !== "number" && String(rawValue).includes("*")) {
     badRequest(`Wildcard er ikke støttet for parameteret ${key}.`);
   }
-  if (key === "bokstav") return { match: { [key]: String(rawValue).toUpperCase() } };
+  if (key === "bokstav") return bokstavQuery(String(rawValue).toUpperCase());
   return { match: { [key]: rawValue } };
+}
+
+// Tom bokstav betyr "uten bokstav"; manglende bokstav er null i indeksen og kan ikke matches med ""
+function bokstavQuery(letter: string): ElasticsearchQuery {
+  if (letter !== "") return { match: { bokstav: letter } };
+  return {
+    bool: {
+      should: [{ term: { bokstav: "" } }, { bool: { must_not: { exists: { field: "bokstav" } } } }],
+    },
+  };
 }
 
 function applyFuzziness(term: string, fuzzy: boolean): string {
