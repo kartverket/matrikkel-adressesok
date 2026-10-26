@@ -282,16 +282,6 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
     expect(entries[0]?.status).toBe(400);
   });
 
-  test("reports readiness based on Elasticsearch", async () => {
-    const app = appWith({
-      isReady: async () => false,
-      search: async () => ({ total: 0, hits: [] }),
-    });
-    const response = await app.request("/adresser/v1/internal/isReady");
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ status: "DOWN" });
-  });
-
   test("exposes Prometheus metrics", async () => {
     const app = appWith({
       isReady: async () => true,

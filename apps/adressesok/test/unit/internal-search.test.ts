@@ -87,6 +87,30 @@ describe("internal managed search routes", () => {
     expect(capturedQuery).toEqual({ match: { undernummer: 1 } });
   });
 
+  test("isReady depends on the legacy Elasticsearch only", async () => {
+    const managedElasticsearch = {
+      isReady: async () => {
+        throw new Error("isReady must not call the managed Elasticsearch client");
+      },
+      search: async () => ({ total: 0, hits: [] }),
+    };
+    const create = (legacyReady: boolean) =>
+      createApp({
+        elasticsearch: { ...elasticsearch, isReady: async () => legacyReady },
+        managedElasticsearch,
+        logger,
+        registry: new Registry(),
+      });
+
+    const up = await create(true).request("/adresser/v1/internal/isReady");
+    expect(up.status).toBe(200);
+    expect(await up.json()).toEqual({ status: "UP" });
+
+    const down = await create(false).request("/adresser/v1/internal/isReady");
+    expect(down.status).toBe(503);
+    expect(await down.json()).toEqual({ status: "DOWN" });
+  });
+
   test("does not change today's /sok or /punktsok flow", async () => {
     let legacyQueryBody: ElasticsearchSearchBody | undefined;
     const legacyElasticsearch = {

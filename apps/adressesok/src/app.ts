@@ -77,9 +77,9 @@ export function createApp({
 
   app.get("/internal/isAlive", (c) => c.json({ status: "UP" }));
   app.get("/internal/isReady", async (c) => {
-    const legacyReady = await elasticsearch.isReady();
-    const managedReady = await managedElasticsearch.isReady();
-    if (!legacyReady || !managedReady) return c.json({ status: "DOWN" }, 503);
+    // Bevisst uten managedElasticsearch: /internal/* er ikke i produksjon ennå, og
+    // nedetid på det nye clusteret skal ikke ta ned /sok.
+    if (!(await elasticsearch.isReady())) return c.json({ status: "DOWN" }, 503);
 
     return c.json({ status: "UP" });
   });
