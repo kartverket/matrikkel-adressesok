@@ -2,18 +2,12 @@ import { describe, expect, test } from "bun:test";
 import pino from "pino";
 import { Registry } from "prom-client";
 import { createApp } from "../../src/app";
-import type { ElasticsearchSearchBody } from "../../src/elasticsearch";
 import type { ManagedSearchResult } from "../../src/managed-elasticsearch";
 
 const logger = pino({ enabled: false });
 
-const elasticsearch = {
-  isReady: async () => true,
-  search: async () => ({ total: 0, hits: [] }),
-};
-
 describe("internal managed search routes", () => {
-  test("/internal/sok builds a query against the new ES9 field names and maps the response", async () => {
+  test("/sok builds a query against the new ES9 field names and maps the response", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {
       isReady: async () => true,
@@ -39,15 +33,12 @@ describe("internal managed search routes", () => {
       },
     };
     const app = createApp({
-      elasticsearch,
       managedElasticsearch,
       logger,
       registry: new Registry(),
     });
 
-    const response = await app.request(
-      "/adresser/v1/internal/sok?kommunenummer=3007&objtype=Vegadresse",
-    );
+    const response = await app.request("/adresser/v1/sok?kommunenummer=3007&objtype=Vegadresse");
     expect(response.status).toBe(200);
     expect(capturedQuery).toEqual({
       bool: {
@@ -119,6 +110,23 @@ describe("internal managed search routes", () => {
   });
 
   test("/internal/sok searches on undernummer", async () => {
+  test("/sok strips wildcards on keyword fields and matches exactly", async () => {
+    let capturedQuery: unknown;
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async (body: { query?: unknown }) => {
+        capturedQuery = body.query;
+        return { total: 0, hits: [] };
+      },
+    };
+    const app = createApp({ managedElasticsearch, logger, registry: new Registry() });
+
+    const response = await app.request("/adresser/v1/sok?postnummer=0154*");
+    expect(response.status).toBe(200);
+    expect(capturedQuery).toEqual({ match: { postnummer: "0154" } });
+  });
+
+  test("/sok searches on undernummer", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {
       isReady: async () => true,
@@ -128,18 +136,17 @@ describe("internal managed search routes", () => {
       },
     };
     const app = createApp({
-      elasticsearch,
       managedElasticsearch,
       logger,
       registry: new Registry(),
     });
 
-    const response = await app.request("/adresser/v1/internal/sok?undernummer=1");
+    const response = await app.request("/adresser/v1/sok?undernummer=1");
     expect(response.status).toBe(200);
     expect(capturedQuery).toEqual({ match: { undernummer: 1 } });
   });
 
-  test("/internal/sok treats an empty bokstav as addresses without a letter", async () => {
+  test("/sok treats an empty bokstav as addresses without a letter", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {
       isReady: async () => true,
@@ -149,28 +156,23 @@ describe("internal managed search routes", () => {
       },
     };
     const app = createApp({
-      elasticsearch,
       managedElasticsearch,
       logger,
       registry: new Registry(),
     });
 
-    const response = await app.request("/adresser/v1/internal/sok?nummer=17&bokstav=");
+    const response = await app.request("/adresser/v1/sok?nummer=17&bokstav=");
     expect(response.status).toBe(200);
     expect(JSON.stringify(capturedQuery)).toContain('"must_not":{"exists":{"field":"bokstav"}}');
   });
 
-  test("isReady depends on the legacy Elasticsearch only", async () => {
-    const managedElasticsearch = {
-      isReady: async () => {
-        throw new Error("isReady must not call the managed Elasticsearch client");
-      },
-      search: async () => ({ total: 0, hits: [] }),
-    };
-    const create = (legacyReady: boolean) =>
+  test("isReady depends on the managed Elasticsearch", async () => {
+    const create = (ready: boolean) =>
       createApp({
-        elasticsearch: { ...elasticsearch, isReady: async () => legacyReady },
-        managedElasticsearch,
+        managedElasticsearch: {
+          isReady: async () => ready,
+          search: async () => ({ total: 0, hits: [] }),
+        },
         logger,
         registry: new Registry(),
       });
@@ -182,32 +184,5 @@ describe("internal managed search routes", () => {
     const down = await create(false).request("/adresser/v1/internal/isReady");
     expect(down.status).toBe(503);
     expect(await down.json()).toEqual({ status: "DOWN" });
-  });
-
-  test("does not change today's /sok or /punktsok flow", async () => {
-    let legacyQueryBody: ElasticsearchSearchBody | undefined;
-    const legacyElasticsearch = {
-      isReady: async () => true,
-      search: async (body: ElasticsearchSearchBody) => {
-        legacyQueryBody = body;
-        return { total: 0, hits: [] };
-      },
-    };
-    const managedElasticsearch = {
-      isReady: async () => true,
-      search: async () => {
-        throw new Error("legacy /sok must not call the managed Elasticsearch client");
-      },
-    };
-    const app = createApp({
-      elasticsearch: legacyElasticsearch,
-      managedElasticsearch,
-      logger,
-      registry: new Registry(),
-    });
-
-    const response = await app.request("/adresser/v1/sok?kommunenummer=3007");
-    expect(response.status).toBe(200);
-    expect(legacyQueryBody?.query).toEqual({ match: { adresse_kommunenummer: "3007" } });
   });
 });

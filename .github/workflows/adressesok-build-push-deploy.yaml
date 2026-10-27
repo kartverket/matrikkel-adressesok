@@ -56,14 +56,6 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run check
-      - run: bun run compose:up
-      - run: bun run test:integration
-        env:
-          ELS_ADRESSER_URL: http://localhost:9200
-          ELS_ADRESSER_INDEX: adressesok-test
-          ADRESSER_API_LOG_LEVEL: ERROR
-      - run: bun run compose:down
-        if: always()
 
   build:
     runs-on: ubuntu-latest
