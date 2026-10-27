@@ -7,14 +7,9 @@ import {
 
 const implementations = [
   {
-    implementation: "legacy",
+    implementation: "managed",
     searchPath: "/adresser/v1/sok",
     pointSearchPath: "/adresser/v1/punktsok",
-  },
-  {
-    implementation: "managed",
-    searchPath: "/adresser/v1/internal/sok",
-    pointSearchPath: "/adresser/v1/internal/punktsok",
   },
 ] satisfies Array<{
   implementation: SearchImplementation;
