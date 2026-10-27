@@ -30,8 +30,8 @@ const document: ElasticAddressDocument = {
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
   atkomstpunkt: {
-    atkomstOy: point,
-    AtkomstNodetat: null,
+    oy: point,
+    nodetat: null,
     sommer: point,
     vinter: point,
     generell: point,

@@ -82,8 +82,8 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
     representasjonspunkt: address.representasjonspunkt,
     representasjonspunkt_stedfesting_verifisert: address.stedfestingverifisert,
     atkomstpunkt: {
-      atkomstOy: null,
-      AtkomstNodetat: null,
+      oy: null,
+      nodetat: null,
       sommer: null,
       vinter: null,
       generell: null,

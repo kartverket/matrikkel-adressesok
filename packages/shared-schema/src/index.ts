@@ -24,8 +24,8 @@ export interface AddressDocument {
   oppdateringsdato?: string | null;
   adresseid?: string | null;
   atkomstpunkt?: {
-    atkomstOy: AddressPoint | null;
-    AtkomstNodetat: AddressPoint | null;
+    oy: AddressPoint | null;
+    nodetat: AddressPoint | null;
     sommer: AddressPoint | null;
     vinter: AddressPoint | null;
     generell: AddressPoint | null;

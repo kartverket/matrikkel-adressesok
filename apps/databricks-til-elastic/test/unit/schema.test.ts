@@ -29,8 +29,8 @@ const base: DatabricksRow = {
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
   atkomstpunkt: {
-    atkomstOy: point,
-    AtkomstNodetat: null,
+    oy: point,
+    nodetat: null,
     sommer: point,
     vinter: point,
     generell: point,
@@ -56,8 +56,8 @@ describe("rowToDocument", () => {
 
   it("beholder null for sommer og vinter og et gyldig generelt punkt", () => {
     const atkomstpunkt = {
-      atkomstOy: null,
-      AtkomstNodetat: point,
+      oy: null,
+      nodetat: point,
       sommer: null,
       vinter: null,
       generell: point,
@@ -67,8 +67,8 @@ describe("rowToDocument", () => {
 
   it("beholder null for adressenavn, kortnavn, adressekode, adressetilleggsnavn og atkomstpunkt.generell", () => {
     const atkomstpunkt = {
-      atkomstOy: null,
-      AtkomstNodetat: null,
+      oy: null,
+      nodetat: null,
       sommer: null,
       vinter: null,
       generell: null,

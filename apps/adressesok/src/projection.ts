@@ -94,8 +94,8 @@ export function reprojectAddresses(
       }),
       ...(atkomstpunkt && {
         atkomstpunkt: {
-          atkomstOy: maybe(atkomstpunkt.atkomstOy),
-          AtkomstNodetat: maybe(atkomstpunkt.AtkomstNodetat),
+          oy: maybe(atkomstpunkt.oy),
+          nodetat: maybe(atkomstpunkt.nodetat),
           sommer: maybe(atkomstpunkt.sommer),
           vinter: maybe(atkomstpunkt.vinter),
           generell: maybe(atkomstpunkt.generell),

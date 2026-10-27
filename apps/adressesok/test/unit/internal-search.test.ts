@@ -72,8 +72,8 @@ describe("internal managed search routes", () => {
                 bruksenhetsnummer: [],
                 representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
                 atkomstpunkt: {
-                  atkomstOy: { lat: 60.2, lon: 10.3 },
-                  AtkomstNodetat: null,
+                  oy: { lat: 60.2, lon: 10.3 },
+                  nodetat: null,
                   sommer: { lat: 60.1, lon: 10.2 },
                   vinter: null,
                   generell: null,
@@ -94,8 +94,8 @@ describe("internal managed search routes", () => {
     };
     expect(body.adresser[0]?.adresseid).toBe("12345");
     expect(body.adresser[0]?.atkomstpunkt).toEqual({
-      atkomstOy: { epsg: "EPSG:4258", lat: 60.2, lon: 10.3 },
-      AtkomstNodetat: null,
+      oy: { epsg: "EPSG:4258", lat: 60.2, lon: 10.3 },
+      nodetat: null,
       sommer: { epsg: "EPSG:4258", lat: 60.1, lon: 10.2 },
       vinter: null,
       generell: null,
@@ -105,11 +105,11 @@ describe("internal managed search routes", () => {
       await app.request("/adresser/v1/sok?kommunenummer=3007&utkoordsys=25833")
     ).json()) as {
       adresser: Array<{
-        atkomstpunkt: { sommer: { epsg: string }; atkomstOy: { epsg: string }; vinter: null };
+        atkomstpunkt: { sommer: { epsg: string }; oy: { epsg: string }; vinter: null };
       }>;
     };
     expect(utm.adresser[0]?.atkomstpunkt.sommer.epsg).toBe("EPSG:25833");
-    expect(utm.adresser[0]?.atkomstpunkt.atkomstOy.epsg).toBe("EPSG:25833");
+    expect(utm.adresser[0]?.atkomstpunkt.oy.epsg).toBe("EPSG:25833");
     expect(utm.adresser[0]?.atkomstpunkt.vinter).toBeNull();
   });
 

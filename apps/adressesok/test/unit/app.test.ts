@@ -90,8 +90,8 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
           ...(implementation === "managed" && {
             adresseid: "test-address",
             atkomstpunkt: {
-              atkomstOy: null,
-              AtkomstNodetat: null,
+              oy: null,
+              nodetat: null,
               sommer: null,
               vinter: null,
               generell: null,
