@@ -57,6 +57,22 @@ describe("internal managed search routes", () => {
     ]);
   });
 
+  test("/sok strips wildcards on keyword fields and matches exactly", async () => {
+    let capturedQuery: unknown;
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async (body: { query?: unknown }) => {
+        capturedQuery = body.query;
+        return { total: 0, hits: [] };
+      },
+    };
+    const app = createApp({ managedElasticsearch, logger, registry: new Registry() });
+
+    const response = await app.request("/adresser/v1/sok?postnummer=0154*");
+    expect(response.status).toBe(200);
+    expect(capturedQuery).toEqual({ match: { postnummer: "0154" } });
+  });
+
   test("/sok searches on undernummer", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {
