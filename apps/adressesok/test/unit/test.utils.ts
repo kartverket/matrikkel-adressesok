@@ -70,7 +70,7 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
     uuid: "test-address",
     adresse_id: "test-address",
     adressetype: address.objtype,
-    oppdateringsdato: address.oppdateringsdato,
+    oppdateringsdato: address.oppdateringsdato ?? "2022-01-27T19:50:50.000Z",
     adressetekst: address.adressetekst,
     adressetekstutenadressetilleggsnavn: address.adressetekstutenadressetilleggsnavn,
     adressenavn: address.adressenavn,
