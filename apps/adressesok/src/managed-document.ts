@@ -49,6 +49,7 @@ const norskTid = new Intl.DateTimeFormat("nb-NO", {
 
 /** Indeksen har UTC, mens dagens API svarer med norsk tid uten tidssone, f.eks. 2024-05-01T14:34:56. */
 function tilNorskTid(utc: string): string {
+  if (!utc) return utc;
   const date = new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(utc) ? utc : `${utc.replace(" ", "T")}Z`);
   const p = Object.fromEntries(norskTid.formatToParts(date).map((x) => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
