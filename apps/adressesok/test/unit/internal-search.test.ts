@@ -97,7 +97,9 @@ describe("internal managed search routes", () => {
       registry: new Registry(),
     });
 
-    const body = (await (await app.request("/adresser/v1/internal/sok")).json()) as {
+    const body = (await (
+      await app.request("/adresser/v1/internal/sok?kommunenummer=3007")
+    ).json()) as {
       adresser: Array<{ adresseid: string; atkomstpunkt: Record<string, unknown> }>;
     };
     expect(body.adresser[0]?.adresseid).toBe("12345");
@@ -108,7 +110,7 @@ describe("internal managed search routes", () => {
     });
 
     const utm = (await (
-      await app.request("/adresser/v1/internal/sok?utkoordsys=25833")
+      await app.request("/adresser/v1/internal/sok?kommunenummer=3007&utkoordsys=25833")
     ).json()) as {
       adresser: Array<{ atkomstpunkt: { sommer: { epsg: string }; vinter: null } }>;
     };
