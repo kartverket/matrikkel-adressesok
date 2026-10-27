@@ -7,7 +7,7 @@ const optionalEnvironmentVariable = z
 
 const EnvironmentSchema = z
   .object({
-    ELS_ADRESSER_URL: z.url(),
+    ELS_ADRESSER_URL: z.url().optional(),
     ELS_ADRESSER_USERNAME: optionalEnvironmentVariable,
     ELS_ADRESSER_PASSWORD: optionalEnvironmentVariable,
     ELS_ADRESSER_INDEX: z.string().default("adressesok"),
@@ -46,7 +46,7 @@ export function loadConfig(env: Record<string, string | undefined> = Bun.env) {
 
   return {
     elasticSearch: {
-      url: parsed.ELS_ADRESSER_URL.replace(/\/$/, ""),
+      url: parsed.ELS_ADRESSER_URL?.replace(/\/$/, ""),
       username: parsed.ELS_ADRESSER_USERNAME,
       password: parsed.ELS_ADRESSER_PASSWORD,
       index: parsed.ELS_ADRESSER_INDEX,

@@ -9,7 +9,7 @@
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `ELS_ADRESSER_URL` | yes | — | Single load-balanced Elasticsearch URL |
+| `ELS_ADRESSER_URL` | no | — | Legacy Elasticsearch 7 URL. Not used by the API (see Search backend) |
 | `ELS_ADRESSER_USERNAME` | no | — | Elasticsearch basic-auth username |
 | `ELS_ADRESSER_PASSWORD` | no | — | Elasticsearch basic-auth password |
 | `ELS_ADRESSER_INDEX` | no | `adressesok` | Elasticsearch index |
@@ -23,16 +23,15 @@
 
 Copy `.env.example` to `.env.local` or export the variables in your shell. Bun loads `.env.local` automatically.
 
-## Internal comparison endpoints
+## Search backend
 
-`/adresser/v1/internal/sok` and `/adresser/v1/internal/punktsok` mirror `/sok` and `/punktsok`,
-but query the new Elasticsearch 9 cluster (`ES_URL`/`ES_API_KEY`) instead of the legacy cluster
-(`ELS_ADRESSER_URL`). They reuse the same validation, pagination, projection, and JSON response
-shape, so results can be diffed 1:1 against `/sok`/`/punktsok` while migrating. They are internal
-(not part of the public OpenAPI docs) and do not affect today's `/sok`/`/punktsok` flow.
+`/sok` and `/punktsok` query the Elasticsearch 9 cluster (`ES_URL`/`ES_API_KEY`, alias chosen by
+`ENVIRONMENT`), and `/internal/isReady` depends on that cluster. The index uses the field names in
+`@matrikkel/shared-schema`'s `ElasticAddressDocument`, and `undernummer` can be used as a search
+parameter. `oppdateringsdato` is stored in UTC and returned as Norwegian local time without a time zone.
 
-The ES9 index uses different field names (`@matrikkel/shared-schema`'s `ElasticAddressDocument`),
-but `undernummer` is indexed and can be used as a search parameter on these endpoints.
+The old Elasticsearch 7 implementation (`ElasticsearchClient`, `constructGeneralQuery` and the
+`ELS_ADRESSER_*` configuration) is kept in the code base but is no longer wired to any route.
 
 ## Run locally
 

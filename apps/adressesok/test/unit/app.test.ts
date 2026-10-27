@@ -1,34 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import {
-  appWithCapturedLogs as appWithCapturedLogsForImplementation,
-  appWithSearchImplementation,
-  type SearchImplementation,
-} from "./test.utils";
+import { appWith, appWithCapturedLogs } from "./test.utils";
 
-const implementations = [
-  {
-    implementation: "legacy",
-    searchPath: "/adresser/v1/sok",
-    pointSearchPath: "/adresser/v1/punktsok",
-  },
-  {
-    implementation: "managed",
-    searchPath: "/adresser/v1/internal/sok",
-    pointSearchPath: "/adresser/v1/internal/punktsok",
-  },
-] satisfies Array<{
-  implementation: SearchImplementation;
-  searchPath: string;
-  pointSearchPath: string;
-}>;
+const searchPath = "/adresser/v1/sok";
+const pointSearchPath = "/adresser/v1/punktsok";
 
-describe.each(implementations)("HTTP ($implementation)", (parameters) => {
-  const { implementation, searchPath, pointSearchPath } = parameters;
-  const appWith = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
-    appWithSearchImplementation(elasticsearch, implementation);
-  const appWithCapturedLogs = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
-    appWithCapturedLogsForImplementation(elasticsearch, implementation);
-
+describe("HTTP", () => {
   test("serves the search response in the legacy shape", async () => {
     const app = appWith({
       isReady: async () => true,
@@ -89,9 +65,8 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
             lat: 60.145187,
             lon: 10.2497,
           },
-          // Den nye indeksen har UTC og svarer i norsk tid (vintertid: +1 time)
-          oppdateringsdato:
-            implementation === "managed" ? "2022-01-27T20:50:50" : "2022-01-27T19:50:50",
+          // Indeksen har UTC, men API-et svarer i norsk tid (vintertid: +1 time)
+          oppdateringsdato: "2022-01-27T20:50:50",
         },
       ],
     });
@@ -222,20 +197,15 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
     const response = await app.request(`${searchPath}?${query}`);
 
     expect(response.status).toBe(200);
-    const expectedQuery = {
+    // Søket begrenser seg til eksplisitte felt (se internal-search.ts)
+    expect(capturedQuery).toMatchObject({
       simple_query_string: {
         query: "Lakkegata~",
         default_operator: "AND",
         fuzzy_max_expansions: 100,
       },
-    };
-    if (implementation === "managed") {
-      // Managed søk begrenser seg til eksplisitte felt (se internal-search.ts)
-      expect(capturedQuery).toMatchObject(expectedQuery);
-      expect(capturedQuery).toHaveProperty("simple_query_string.fields");
-    } else {
-      expect(capturedQuery).toEqual(expectedQuery);
-    }
+    });
+    expect(capturedQuery).toHaveProperty("simple_query_string.fields");
     expect(searchCalls).toBe(1);
     expect(await response.json()).toMatchObject({
       metadata: {

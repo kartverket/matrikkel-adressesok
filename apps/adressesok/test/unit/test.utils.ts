@@ -11,32 +11,12 @@ import type {
   ManagedSearchResult,
 } from "../../src/managed-elasticsearch";
 
-export type SearchImplementation = "legacy" | "managed";
-
 const logger = pino({ enabled: false });
-const managedElasticsearch = {
-  isReady: async () => true,
-  search: async () => ({ total: 0, hits: [] }),
-};
-
-export function appWith(elasticsearch: Elasticsearch) {
-  return createApp({ elasticsearch, managedElasticsearch, logger, registry: new Registry() });
-}
-
-function appWithImplementation(
-  elasticsearch: Elasticsearch,
-  implementation: SearchImplementation,
-  appLogger = logger,
-) {
-  if (implementation === "legacy") {
-    return createApp({
-      elasticsearch,
-      managedElasticsearch,
-      logger: appLogger,
-      registry: new Registry(),
-    });
-  }
-
+/**
+ * Tar imot en mock med den gamle ES7-formen (AddressDocument) og gjør den om til
+ * den nye indeksens dokumentform, slik at testene kan beskrive treff på én måte.
+ */
+function appWithLegacyShapedMock(elasticsearch: Elasticsearch, appLogger = logger) {
   const managedSearch = {
     isReady: elasticsearch.isReady,
     search: async (body: ManagedElasticsearchSearchBody) => {
@@ -58,11 +38,14 @@ function appWithImplementation(
   };
 
   return createApp({
-    elasticsearch: { isReady: async () => true, search: async () => ({ total: 0, hits: [] }) },
     managedElasticsearch: managedSearch,
     logger: appLogger,
     registry: new Registry(),
   });
+}
+
+export function appWith(elasticsearch: Elasticsearch) {
+  return appWithLegacyShapedMock(elasticsearch);
 }
 
 function toManagedDocument(address: AddressDocument): Record<string, unknown> {
@@ -97,21 +80,11 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
   };
 }
 
-export function appWithSearchImplementation(
-  elasticsearch: Elasticsearch,
-  implementation: SearchImplementation,
-) {
-  return appWithImplementation(elasticsearch, implementation);
-}
-
 /**
  * Som appWith, men fanger opp alt som logges slik at tester kan verifisere
  * hvilket nivå (info/warn/error) faktiske request/response-logger havner på.
  */
-export function appWithCapturedLogs(
-  elasticsearch: Elasticsearch,
-  implementation: SearchImplementation = "legacy",
-) {
+export function appWithCapturedLogs(elasticsearch: Elasticsearch) {
   const entries: Record<string, unknown>[] = [];
   const capturingLogger = pino(
     {
@@ -121,6 +94,6 @@ export function appWithCapturedLogs(
     },
     { write: (line: string) => entries.push(JSON.parse(line)) },
   );
-  const app = appWithImplementation(elasticsearch, implementation, capturingLogger);
+  const app = appWithLegacyShapedMock(elasticsearch, capturingLogger);
   return { app, entries };
 }

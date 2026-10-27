@@ -41,6 +41,8 @@ export class ElasticsearchClient implements Elasticsearch {
     private readonly config: AppConfig,
     private readonly logger: Logger,
   ) {
+    if (!config.elasticSearch.url)
+      throw new Error("ELS_ADRESSER_URL is required for ElasticsearchClient");
     const options: ClientOptions = {
       node: config.elasticSearch.url,
       requestTimeout: config.elasticSearch.requestTimeout,
