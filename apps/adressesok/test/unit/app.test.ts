@@ -89,7 +89,9 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
             lat: 60.145187,
             lon: 10.2497,
           },
-          oppdateringsdato: "2022-01-27T19:50:50",
+          // Den nye indeksen har UTC og svarer i norsk tid (vintertid: +1 time)
+          oppdateringsdato:
+            implementation === "managed" ? "2022-01-27T20:50:50" : "2022-01-27T19:50:50",
         },
       ],
     });
