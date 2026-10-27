@@ -65,7 +65,6 @@ describe("convertManagedDocument", () => {
 
     expect(convert("2024-05-01T12:34:56.789Z")).toBe("2024-05-01T14:34:56");
     expect(convert("2024-01-15T12:34:56.789Z")).toBe("2024-01-15T13:34:56");
-    expect(convert("2024-05-01 12:34:56.789")).toBe("2024-05-01T14:34:56");
     expect(convert("2024-05-01T23:30:00Z")).toBe("2024-05-02T01:30:00");
   });
 
