@@ -69,22 +69,34 @@ export function reprojectAddresses(
 ): AddressDocument[] {
   if (outputSrid === DEFAULT_SRID) return addresses;
 
-  return addresses.map((address) => {
-    if (!address.representasjonspunkt) return address;
-    let point: Coordinate;
+  const reproject = (point: Coordinate) => {
     try {
-      point = transform(address.representasjonspunkt, DEFAULT_SRID, outputSrid);
+      const transformed = transform(point, DEFAULT_SRID, outputSrid);
+      return {
+        epsg: `EPSG:${outputSrid}`,
+        lat: Number(transformed.lat.toFixed(7)),
+        lon: Number(transformed.lon.toFixed(7)),
+      };
     } catch (error) {
       if (error instanceof HttpError) throw error;
       badRequest(`Ukjent srid/epsg: ${outputSrid}`);
     }
+  };
+
+  return addresses.map((address) => {
+    const { atkomstpunkt } = address;
     return {
       ...address,
-      representasjonspunkt: {
-        epsg: `EPSG:${outputSrid}`,
-        lat: Number(point.lat.toFixed(7)),
-        lon: Number(point.lon.toFixed(7)),
-      },
+      ...(address.representasjonspunkt && {
+        representasjonspunkt: reproject(address.representasjonspunkt),
+      }),
+      ...(atkomstpunkt && {
+        atkomstpunkt: {
+          sommer: atkomstpunkt.sommer && reproject(atkomstpunkt.sommer),
+          vinter: atkomstpunkt.vinter && reproject(atkomstpunkt.vinter),
+          generell: atkomstpunkt.generell && reproject(atkomstpunkt.generell),
+        },
+      }),
     };
   });
 }

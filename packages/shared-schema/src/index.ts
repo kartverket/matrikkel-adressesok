@@ -1,3 +1,5 @@
+type AddressPoint = { epsg?: string; lat: number; lon: number };
+
 export interface AddressDocument {
   adressenavn?: string | null;
   adressetekst?: string | null;
@@ -20,6 +22,12 @@ export interface AddressDocument {
   stedfestingverifisert?: boolean | null;
   representasjonspunkt?: { epsg?: string; lat: number; lon: number } | null;
   oppdateringsdato?: string | null;
+  adresseid?: string | null;
+  atkomstpunkt?: {
+    sommer: AddressPoint | null;
+    vinter: AddressPoint | null;
+    generell: AddressPoint | null;
+  };
   meterDistanseTilPunkt?: number;
 }
 

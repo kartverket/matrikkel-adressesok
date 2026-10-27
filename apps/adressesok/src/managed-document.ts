@@ -13,6 +13,7 @@ export function convertManagedDocument(document: ElasticAddressDocument): Addres
       : Number(document.adressekode);
 
   return {
+    adresseid: document.adresse_id,
     adressenavn: document.adressenavn,
     adressetekst: document.adressetekst,
     adressetilleggsnavn: document.adressetilleggsnavn,
@@ -34,6 +35,8 @@ export function convertManagedDocument(document: ElasticAddressDocument): Addres
     stedfestingverifisert: document.representasjonspunkt_stedfesting_verifisert,
     representasjonspunkt: document.representasjonspunkt,
     oppdateringsdato: tilNorskTid(document.oppdateringsdato),
+
+    atkomstpunkt: document.atkomstpunkt,
   };
 }
 

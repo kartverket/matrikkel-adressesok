@@ -25,6 +25,11 @@ const RepresentationPointSchema = z.object({
   lat: z.number(),
   lon: z.number(),
 });
+const AccessPointsSchema = z.object({
+  sommer: RepresentationPointSchema.nullable(),
+  vinter: RepresentationPointSchema.nullable(),
+  generell: RepresentationPointSchema.nullable(),
+});
 const AddressOutputSchema = z.object({
   adressenavn: nullableString,
   adressetekst: nullableString,
@@ -46,6 +51,8 @@ const AddressOutputSchema = z.object({
   stedfestingverifisert: z.boolean().nullable().optional(),
   representasjonspunkt: RepresentationPointSchema.nullable().optional(),
   oppdateringsdato: nullableString,
+  adresseid: z.string().nullable().optional(),
+  atkomstpunkt: AccessPointsSchema.optional(),
 });
 const GeoAddressOutputSchema = AddressOutputSchema.extend({
   meterDistanseTilPunkt: z.number().optional(),
