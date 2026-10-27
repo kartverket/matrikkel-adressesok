@@ -18,6 +18,8 @@ const textFields = new Set([
   "adressenavn",
   "postnummer",
 ]);
+// Keyword-felt i ES9-indeksen: match_phrase_prefix støttes bare på text-felt, så * fjernes og vi søker eksakt
+const keywordFields = new Set(["kommunenummer", "postnummer"]);
 const exactPhraseFields = new Set(["adressetekst", "adressenavn"]);
 // Uten eksplisitte felt søker simple_query_string i alle felt, og wildcard
 // (f.eks. "5*") treffer da uvedkommende felter. Feltene hentes fra dokumentskjemaet,
@@ -61,16 +63,15 @@ function replaceIllegalCharacters(value: string): string {
     .trim();
 }
 
+function wildcardQuery(key: string, prefix: string): ElasticsearchQuery {
+  if (keywordFields.has(key)) return { match: { [key]: prefix } };
+  return { match_phrase_prefix: { [key]: { query: prefix, max_expansions: 500 } } };
+}
+
 function queryForField(key: string, rawValue: string | number): ElasticsearchQuery {
   if (textFields.has(key)) {
     const value = replaceIllegalCharacters(String(rawValue));
-    if (value.includes("*")) {
-      return {
-        match_phrase_prefix: {
-          [key]: { query: value.replace(/\*/g, ""), max_expansions: 500 },
-        },
-      };
-    }
+    if (value.includes("*")) return wildcardQuery(key, value.replace(/\*/g, ""));
     if (exactPhraseFields.has(key)) {
       return { match_phrase: { [key]: value } };
     }
