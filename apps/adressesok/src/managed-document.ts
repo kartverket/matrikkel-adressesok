@@ -33,6 +33,22 @@ export function convertManagedDocument(document: ElasticAddressDocument): Addres
     adressetekstutenadressetilleggsnavn: document.adressetekstutenadressetilleggsnavn,
     stedfestingverifisert: document.representasjonspunkt_stedfesting_verifisert,
     representasjonspunkt: document.representasjonspunkt,
-    oppdateringsdato: document.oppdateringsdato,
+    oppdateringsdato: tilNorskTid(document.oppdateringsdato),
   };
+}
+
+const norskTid = new Intl.DateTimeFormat("nb-NO", {
+  timeZone: "Europe/Oslo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+/** Indeksen har UTC, mens dagens API svarer med norsk tid uten tidssone, f.eks. 2024-05-01T14:34:56. */
+function tilNorskTid(utc: string): string {
+  const p = Object.fromEntries(norskTid.formatToParts(new Date(utc)).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
 }

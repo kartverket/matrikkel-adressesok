@@ -36,7 +36,12 @@ export function createApp({
   });
 
   app.use("*", registerMetrics);
-  app.use(createStructuredHonoLogger(logger, `${BASE_PATH}/internal/`));
+  app.use(
+    createStructuredHonoLogger(
+      logger,
+      ["isAlive", "isReady", "metrics"].map((name) => `${BASE_PATH}/internal/${name}`),
+    ),
+  );
   app.use(
     "*",
     cors({

@@ -18,11 +18,11 @@ function logLevelForStatus(status: number): "info" | "warn" | "error" {
   return "info";
 }
 
-export function createStructuredHonoLogger(logger: Logger, internalPath: string) {
+export function createStructuredHonoLogger(logger: Logger, skippedPaths: string[]) {
   return structuredLogger({
     createLogger: () => logger,
     onResponse: (logger, c, elapsedMs) => {
-      if (c.req.path.startsWith(internalPath)) return;
+      if (skippedPaths.includes(c.req.path)) return;
 
       const durationMs = Math.round(elapsedMs * 100) / 100;
       const status = c.res.status;
