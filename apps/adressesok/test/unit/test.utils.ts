@@ -19,24 +19,15 @@ const managedElasticsearch = {
   search: async () => ({ total: 0, hits: [] }),
 };
 
-export function appWith(elasticsearch: Elasticsearch) {
-  return createApp({ elasticsearch, managedElasticsearch, logger, registry: new Registry() });
+export function appWith(_elasticsearch: Elasticsearch) {
+  return createApp({ managedElasticsearch, logger, registry: new Registry() });
 }
 
 function appWithImplementation(
   elasticsearch: Elasticsearch,
-  implementation: SearchImplementation,
+  _implementation: SearchImplementation,
   appLogger = logger,
 ) {
-  if (implementation === "legacy") {
-    return createApp({
-      elasticsearch,
-      managedElasticsearch,
-      logger: appLogger,
-      registry: new Registry(),
-    });
-  }
-
   const managedSearch = {
     isReady: elasticsearch.isReady,
     search: async (body: ManagedElasticsearchSearchBody) => {
@@ -58,7 +49,6 @@ function appWithImplementation(
   };
 
   return createApp({
-    elasticsearch: { isReady: async () => true, search: async () => ({ total: 0, hits: [] }) },
     managedElasticsearch: managedSearch,
     logger: appLogger,
     registry: new Registry(),
@@ -99,9 +89,9 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
 
 export function appWithSearchImplementation(
   elasticsearch: Elasticsearch,
-  implementation: SearchImplementation,
+  _implementation: SearchImplementation,
 ) {
-  return appWithImplementation(elasticsearch, implementation);
+  return appWithImplementation(elasticsearch, _implementation);
 }
 
 /**
