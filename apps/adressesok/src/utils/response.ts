@@ -26,6 +26,8 @@ const RepresentationPointSchema = z.object({
   lon: z.number(),
 });
 const AccessPointsSchema = z.object({
+  atkomstOy: RepresentationPointSchema.nullable(),
+  AtkomstNodetat: RepresentationPointSchema.nullable(),
   sommer: RepresentationPointSchema.nullable(),
   vinter: RepresentationPointSchema.nullable(),
   generell: RepresentationPointSchema.nullable(),

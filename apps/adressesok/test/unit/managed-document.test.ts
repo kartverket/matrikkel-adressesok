@@ -29,7 +29,13 @@ const document: ElasticAddressDocument = {
   undernummer: null,
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
-  atkomstpunkt: { sommer: point, vinter: point, generell: point },
+  atkomstpunkt: {
+    atkomstOy: point,
+    AtkomstNodetat: null,
+    sommer: point,
+    vinter: point,
+    generell: point,
+  },
   "@version": "2",
   "@timestamp": "2024-05-01T12:34:56.789Z",
 };

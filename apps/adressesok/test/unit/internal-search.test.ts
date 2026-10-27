@@ -57,7 +57,7 @@ describe("internal managed search routes", () => {
     ]);
   });
 
-  test("/internal/sok returns atkomstpunkt, reprojected with utkoordsys", async () => {
+  test("/sok returns atkomstpunkt, reprojected with utkoordsys", async () => {
     const managedElasticsearch = {
       isReady: async () => true,
       search: async () =>
@@ -72,6 +72,8 @@ describe("internal managed search routes", () => {
                 bruksenhetsnummer: [],
                 representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
                 atkomstpunkt: {
+                  atkomstOy: { lat: 60.2, lon: 10.3 },
+                  AtkomstNodetat: null,
                   sommer: { lat: 60.1, lon: 10.2 },
                   vinter: null,
                   generell: null,
@@ -82,34 +84,35 @@ describe("internal managed search routes", () => {
         }) as unknown as ManagedSearchResult,
     };
     const app = createApp({
-      elasticsearch,
       managedElasticsearch,
       logger,
       registry: new Registry(),
     });
 
-    const body = (await (
-      await app.request("/adresser/v1/internal/sok?kommunenummer=3007")
-    ).json()) as {
+    const body = (await (await app.request("/adresser/v1/sok?kommunenummer=3007")).json()) as {
       adresser: Array<{ adresseid: string; atkomstpunkt: Record<string, unknown> }>;
     };
     expect(body.adresser[0]?.adresseid).toBe("12345");
     expect(body.adresser[0]?.atkomstpunkt).toEqual({
+      atkomstOy: { epsg: "EPSG:4258", lat: 60.2, lon: 10.3 },
+      AtkomstNodetat: null,
       sommer: { epsg: "EPSG:4258", lat: 60.1, lon: 10.2 },
       vinter: null,
       generell: null,
     });
 
     const utm = (await (
-      await app.request("/adresser/v1/internal/sok?kommunenummer=3007&utkoordsys=25833")
+      await app.request("/adresser/v1/sok?kommunenummer=3007&utkoordsys=25833")
     ).json()) as {
-      adresser: Array<{ atkomstpunkt: { sommer: { epsg: string }; vinter: null } }>;
+      adresser: Array<{
+        atkomstpunkt: { sommer: { epsg: string }; atkomstOy: { epsg: string }; vinter: null };
+      }>;
     };
     expect(utm.adresser[0]?.atkomstpunkt.sommer.epsg).toBe("EPSG:25833");
+    expect(utm.adresser[0]?.atkomstpunkt.atkomstOy.epsg).toBe("EPSG:25833");
     expect(utm.adresser[0]?.atkomstpunkt.vinter).toBeNull();
   });
 
-  test("/internal/sok searches on undernummer", async () => {
   test("/sok strips wildcards on keyword fields and matches exactly", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {

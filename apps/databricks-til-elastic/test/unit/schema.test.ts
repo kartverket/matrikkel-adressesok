@@ -28,7 +28,13 @@ const base: DatabricksRow = {
   undernummer: null,
   representasjonspunkt: point,
   representasjonspunkt_stedfesting_verifisert: true,
-  atkomstpunkt: { sommer: point, vinter: point, generell: point },
+  atkomstpunkt: {
+    atkomstOy: point,
+    AtkomstNodetat: null,
+    sommer: point,
+    vinter: point,
+    generell: point,
+  },
 };
 
 describe("rowToDocument", () => {
@@ -49,12 +55,24 @@ describe("rowToDocument", () => {
   });
 
   it("beholder null for sommer og vinter og et gyldig generelt punkt", () => {
-    const atkomstpunkt = { sommer: null, vinter: null, generell: point };
+    const atkomstpunkt = {
+      atkomstOy: null,
+      AtkomstNodetat: point,
+      sommer: null,
+      vinter: null,
+      generell: point,
+    };
     expect(rowToDocument({ ...base, atkomstpunkt }, timestamp).atkomstpunkt).toEqual(atkomstpunkt);
   });
 
   it("beholder null for adressenavn, kortnavn, adressekode, adressetilleggsnavn og atkomstpunkt.generell", () => {
-    const atkomstpunkt = { sommer: null, vinter: null, generell: null };
+    const atkomstpunkt = {
+      atkomstOy: null,
+      AtkomstNodetat: null,
+      sommer: null,
+      vinter: null,
+      generell: null,
+    };
     const document = rowToDocument(
       {
         ...base,
@@ -95,6 +113,7 @@ describe("rowToDocument", () => {
   it("avviser ufullstendige og ugyldige nestede punkter", () => {
     for (const value of [
       { generell: point },
+      { sommer: point, vinter: point, generell: point },
       { sommer: point, vinter: point, generell: { lat: null, lon: 10.75 } },
       { sommer: { lat: null, lon: 10.75 }, vinter: point, generell: point },
     ]) {

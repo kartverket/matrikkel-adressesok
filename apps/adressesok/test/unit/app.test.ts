@@ -89,7 +89,13 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
             implementation === "managed" ? "2022-01-27T20:50:50" : "2022-01-27T19:50:50",
           ...(implementation === "managed" && {
             adresseid: "test-address",
-            atkomstpunkt: { sommer: null, vinter: null, generell: null },
+            atkomstpunkt: {
+              atkomstOy: null,
+              AtkomstNodetat: null,
+              sommer: null,
+              vinter: null,
+              generell: null,
+            },
           }),
         },
       ],

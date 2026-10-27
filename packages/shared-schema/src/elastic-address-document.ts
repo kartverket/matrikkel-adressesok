@@ -41,6 +41,8 @@ export const ElasticAddressDocumentSchema = z.object({
   representasjonspunkt: z.object({ lat: z.number(), lon: z.number() }),
   representasjonspunkt_stedfesting_verifisert: z.boolean(),
   atkomstpunkt: z.object({
+    atkomstOy: z.object({ lat: z.number(), lon: z.number() }).nullable(),
+    AtkomstNodetat: z.object({ lat: z.number(), lon: z.number() }).nullable(),
     sommer: z.object({ lat: z.number(), lon: z.number() }).nullable(),
     vinter: z.object({ lat: z.number(), lon: z.number() }).nullable(),
     generell: z.object({ lat: z.number(), lon: z.number() }).nullable(),

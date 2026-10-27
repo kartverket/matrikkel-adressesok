@@ -83,6 +83,8 @@ export function reprojectAddresses(
     }
   };
 
+  const maybe = (point?: Coordinate | null) => (point ? reproject(point) : null);
+
   return addresses.map((address) => {
     const { atkomstpunkt } = address;
     return {
@@ -92,9 +94,11 @@ export function reprojectAddresses(
       }),
       ...(atkomstpunkt && {
         atkomstpunkt: {
-          sommer: atkomstpunkt.sommer && reproject(atkomstpunkt.sommer),
-          vinter: atkomstpunkt.vinter && reproject(atkomstpunkt.vinter),
-          generell: atkomstpunkt.generell && reproject(atkomstpunkt.generell),
+          atkomstOy: maybe(atkomstpunkt.atkomstOy),
+          AtkomstNodetat: maybe(atkomstpunkt.AtkomstNodetat),
+          sommer: maybe(atkomstpunkt.sommer),
+          vinter: maybe(atkomstpunkt.vinter),
+          generell: maybe(atkomstpunkt.generell),
         },
       }),
     };
