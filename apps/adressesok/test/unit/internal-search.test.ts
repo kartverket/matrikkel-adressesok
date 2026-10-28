@@ -57,6 +57,62 @@ describe("internal managed search routes", () => {
     ]);
   });
 
+  test("/sok returns atkomstpunkt, reprojected with utkoordsys", async () => {
+    const managedElasticsearch = {
+      isReady: async () => true,
+      search: async () =>
+        ({
+          total: 1,
+          hits: [
+            {
+              _source: {
+                adresse_id: "12345",
+                adressetype: "Vegadresse",
+                oppdateringsdato: "2022-01-27T19:50:50.000Z",
+                bruksenhetsnummer: [],
+                representasjonspunkt: { lat: 60.145187, lon: 10.2497 },
+                atkomstpunkt: {
+                  oy: { lat: 60.2, lon: 10.3 },
+                  nodetat: null,
+                  sommer: { lat: 60.1, lon: 10.2 },
+                  vinter: null,
+                  generell: null,
+                },
+              },
+            },
+          ],
+        }) as unknown as ManagedSearchResult,
+    };
+    const app = createApp({
+      managedElasticsearch,
+      logger,
+      registry: new Registry(),
+    });
+
+    const body = (await (await app.request("/adresser/v1/sok?kommunenummer=3007")).json()) as {
+      adresser: Array<{ adresseid: string; atkomstpunkt: Record<string, unknown> }>;
+    };
+    expect(body.adresser[0]?.adresseid).toBe("12345");
+    expect(body.adresser[0]?.atkomstpunkt).toEqual({
+      oy: { epsg: "EPSG:4258", lat: 60.2, lon: 10.3 },
+      nodetat: null,
+      sommer: { epsg: "EPSG:4258", lat: 60.1, lon: 10.2 },
+      vinter: null,
+      generell: null,
+    });
+
+    const utm = (await (
+      await app.request("/adresser/v1/sok?kommunenummer=3007&utkoordsys=25833")
+    ).json()) as {
+      adresser: Array<{
+        atkomstpunkt: { sommer: { epsg: string }; oy: { epsg: string }; vinter: null };
+      }>;
+    };
+    expect(utm.adresser[0]?.atkomstpunkt.sommer.epsg).toBe("EPSG:25833");
+    expect(utm.adresser[0]?.atkomstpunkt.oy.epsg).toBe("EPSG:25833");
+    expect(utm.adresser[0]?.atkomstpunkt.vinter).toBeNull();
+  });
+
   test("/sok strips wildcards on keyword fields and matches exactly", async () => {
     let capturedQuery: unknown;
     const managedElasticsearch = {

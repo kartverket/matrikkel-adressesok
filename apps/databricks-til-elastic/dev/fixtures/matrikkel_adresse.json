@@ -25,6 +25,8 @@
     "representasjonspunkt": { "lat": 59.91, "lon": 10.75 },
     "representasjonspunkt_stedfesting_verifisert": true,
     "atkomstpunkt": {
+      "oy": null,
+      "nodetat": null,
       "sommer": null,
       "vinter": null,
       "generell": null
@@ -56,6 +58,8 @@
     "representasjonspunkt": { "lat": 60.39, "lon": 5.32 },
     "representasjonspunkt_stedfesting_verifisert": true,
     "atkomstpunkt": {
+      "oy": null,
+      "nodetat": null,
       "sommer": null,
       "vinter": null,
       "generell": { "lat": 60.39, "lon": 5.32 }
@@ -87,6 +91,8 @@
     "representasjonspunkt": { "lat": 69.65, "lon": 18.96 },
     "representasjonspunkt_stedfesting_verifisert": false,
     "atkomstpunkt": {
+      "oy": null,
+      "nodetat": null,
       "sommer": { "lat": 69.65, "lon": 18.96 },
       "vinter": { "lat": 69.66, "lon": 18.97 },
       "generell": { "lat": 69.65, "lon": 18.96 }

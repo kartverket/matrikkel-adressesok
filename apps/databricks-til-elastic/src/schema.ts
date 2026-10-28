@@ -48,6 +48,8 @@ export const DatabricksRowSchema = z
     representasjonspunkt: PointSchema,
     representasjonspunkt_stedfesting_verifisert: z.boolean(),
     atkomstpunkt: z.object({
+      oy: PointSchema.nullable(),
+      nodetat: PointSchema.nullable(),
       sommer: PointSchema.nullable(),
       vinter: PointSchema.nullable(),
       generell: PointSchema.nullable(),
@@ -183,6 +185,8 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
       representasjonspunkt: { type: "geo_point" },
       atkomstpunkt: {
         properties: {
+          oy: { type: "geo_point" },
+          nodetat: { type: "geo_point" },
           sommer: { type: "geo_point" },
           vinter: { type: "geo_point" },
           generell: { type: "geo_point" },

@@ -81,7 +81,13 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
     undernummer: address.undernummer ?? null,
     representasjonspunkt: address.representasjonspunkt,
     representasjonspunkt_stedfesting_verifisert: address.stedfestingverifisert,
-    atkomstpunkt: { sommer: null, vinter: null, generell: null },
+    atkomstpunkt: {
+      oy: null,
+      nodetat: null,
+      sommer: null,
+      vinter: null,
+      generell: null,
+    },
     "@version": "test",
     "@timestamp": "2022-01-27T19:50:50.000Z",
   };
