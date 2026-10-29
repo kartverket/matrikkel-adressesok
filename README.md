@@ -25,5 +25,4 @@ bun run format      # biome format
 bun run lint        # biome lint
 ```
 
-`compose.yaml` i roten starter en lokal Elasticsearch for `apps/adressesok` sine
-integrasjonstester (se `apps/adressesok/package.json` for `compose:up`/`compose:down`).
+`compose.yaml` i roten starter en lokal Elasticsearch for `apps/databricks-til-elastic`.

@@ -1,30 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import {
-  appWithCapturedLogs as appWithCapturedLogsForImplementation,
-  appWithSearchImplementation,
-  type SearchImplementation,
-} from "./test.utils";
+import { appWith, appWithCapturedLogs } from "./test.utils";
 
-const implementations = [
-  {
-    implementation: "managed",
-    searchPath: "/adresser/v1/sok",
-    pointSearchPath: "/adresser/v1/punktsok",
-  },
-] satisfies Array<{
-  implementation: SearchImplementation;
-  searchPath: string;
-  pointSearchPath: string;
-}>;
+const searchPath = "/adresser/v1/sok";
+const pointSearchPath = "/adresser/v1/punktsok";
 
-describe.each(implementations)("HTTP ($implementation)", (parameters) => {
-  const { implementation, searchPath, pointSearchPath } = parameters;
-  const appWith = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
-    appWithSearchImplementation(elasticsearch, implementation);
-  const appWithCapturedLogs = (elasticsearch: Parameters<typeof appWithSearchImplementation>[0]) =>
-    appWithCapturedLogsForImplementation(elasticsearch, implementation);
-
-  test("serves the search response in the legacy shape", async () => {
+describe("HTTP", () => {
+  test("serves the search response in the expected shape", async () => {
     const app = appWith({
       isReady: async () => true,
       search: async () => ({
@@ -84,19 +65,16 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
             lat: 60.145187,
             lon: 10.2497,
           },
-          // Den nye indeksen har UTC og svarer i norsk tid (vintertid: +1 time)
-          oppdateringsdato:
-            implementation === "managed" ? "2022-01-27T20:50:50" : "2022-01-27T19:50:50",
-          ...(implementation === "managed" && {
-            adresseid: "test-address",
-            atkomstpunkt: {
-              oy: null,
-              nodetat: null,
-              sommer: null,
-              vinter: null,
-              generell: null,
-            },
-          }),
+          // Indeksen har UTC og svarer i norsk tid (vintertid: +1 time)
+          oppdateringsdato: "2022-01-27T20:50:50",
+          adresseid: "test-address",
+          atkomstpunkt: {
+            oy: null,
+            nodetat: null,
+            sommer: null,
+            vinter: null,
+            generell: null,
+          },
         },
       ],
     });
@@ -234,13 +212,9 @@ describe.each(implementations)("HTTP ($implementation)", (parameters) => {
         fuzzy_max_expansions: 100,
       },
     };
-    if (implementation === "managed") {
-      // Managed søk begrenser seg til eksplisitte felt (se internal-search.ts)
-      expect(capturedQuery).toMatchObject(expectedQuery);
-      expect(capturedQuery).toHaveProperty("simple_query_string.fields");
-    } else {
-      expect(capturedQuery).toEqual(expectedQuery);
-    }
+    // Søket begrenser seg til eksplisitte felt (se search.ts)
+    expect(capturedQuery).toMatchObject(expectedQuery);
+    expect(capturedQuery).toHaveProperty("simple_query_string.fields");
     expect(searchCalls).toBe(1);
     expect(await response.json()).toMatchObject({
       metadata: {

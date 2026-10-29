@@ -41,10 +41,6 @@ spec:
     port: 3000
     scrapeInterval: 60s
 
-  databases:
-    - name: matrikkel-adressesok
-      envName: ELS_ADRESSER_URL
-
   env:
     - name: NO_COLOR
       value: "true"

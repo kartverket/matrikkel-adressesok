@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import pino from "pino";
 import { loadConfig } from "../../src/config";
-import { ManagedElasticsearchClient } from "../../src/managed-elasticsearch";
+import { ElasticsearchClient } from "../../src/elasticsearch";
 
 const logger = pino({ enabled: false });
 
-describe("managed Elasticsearch search", () => {
+describe("Elasticsearch search", () => {
   test("queries the configured alias and returns documents with their total", async () => {
     const document = { uuid: "adresse-1", adressetekst: "Testveien 1" };
     let path: string | undefined;
@@ -24,10 +24,9 @@ describe("managed Elasticsearch search", () => {
 
     try {
       const config = loadConfig({
-        ELS_ADRESSER_URL: "http://localhost:9200",
         ES_URL: `http://localhost:${server.port}`,
       });
-      const client = new ManagedElasticsearchClient(config.managedElasticSearch, logger);
+      const client = new ElasticsearchClient(config.elasticsearch, logger);
       const result = await client.search({ query: { match_all: {} }, size: 1 });
       expect(result.total).toBe(1);
       expect(result.hits[0]?._source.uuid).toBe(document.uuid);
@@ -51,10 +50,9 @@ describe("managed Elasticsearch search", () => {
 
     try {
       const config = loadConfig({
-        ELS_ADRESSER_URL: "http://localhost:9200",
         ES_URL: `http://localhost:${server.port}`,
       });
-      const client = new ManagedElasticsearchClient(config.managedElasticSearch, logger);
+      const client = new ElasticsearchClient(config.elasticsearch, logger);
       expect(await client.search({ query: { match_all: {} }, size: 1 })).toEqual({
         total: 0,
         hits: [],

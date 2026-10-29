@@ -7,11 +7,6 @@ const optionalEnvironmentVariable = z
 
 const EnvironmentSchema = z
   .object({
-    ELS_ADRESSER_URL: z.url(),
-    ELS_ADRESSER_USERNAME: optionalEnvironmentVariable,
-    ELS_ADRESSER_PASSWORD: optionalEnvironmentVariable,
-    ELS_ADRESSER_INDEX: z.string().default("adressesok"),
-    ELS_ADRESSER_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
     ES_URL: z.url(),
     ES_API_KEY: optionalEnvironmentVariable,
     ENVIRONMENT: z.enum(["DEVELOPMENT", "PRODTEST", "PROD"]).default("DEVELOPMENT"),
@@ -19,13 +14,6 @@ const EnvironmentSchema = z
     PORT: z.coerce.number().int().positive().default(3000),
     ADRESSER_API_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   })
-  .refine(
-    ({ ELS_ADRESSER_USERNAME, ELS_ADRESSER_PASSWORD }) =>
-      (ELS_ADRESSER_USERNAME === undefined) === (ELS_ADRESSER_PASSWORD === undefined),
-    {
-      message: "ELS_ADRESSER_USERNAME and ELS_ADRESSER_PASSWORD must be provided together",
-    },
-  )
   .refine(
     ({ ENVIRONMENT, INTEGRATION_TEST_ID }) =>
       INTEGRATION_TEST_ID === undefined ||
@@ -45,14 +33,7 @@ export function loadConfig(env: Record<string, string | undefined> = Bun.env) {
   const testSuffix = parsed.INTEGRATION_TEST_ID ? `-test-${parsed.INTEGRATION_TEST_ID}` : "";
 
   return {
-    elasticSearch: {
-      url: parsed.ELS_ADRESSER_URL.replace(/\/$/, ""),
-      username: parsed.ELS_ADRESSER_USERNAME,
-      password: parsed.ELS_ADRESSER_PASSWORD,
-      index: parsed.ELS_ADRESSER_INDEX,
-      requestTimeout: parsed.ELS_ADRESSER_TIMEOUT_MS,
-    },
-    managedElasticSearch: {
+    elasticsearch: {
       url: parsed.ES_URL,
       apiKey: parsed.ES_API_KEY,
       alias:
