@@ -1,40 +1,28 @@
-# Matrikkel address API — Bun/Hono
+# Matrikkel adresse-API — Bun/Hono
 
-## Requirements
+## Krav
 
-- Bun 1.3 or newer
-- Docker with Compose for the isolated Elasticsearch integration tests
+- Bun 1.4 eller nyere
 
-## Configuration
+## Konfigurasjon
 
-| Variable | Required | Default | Purpose |
+| Variabel | Påkrevd | Standard | Formål |
 | --- | --- | --- | --- |
-| `ELS_ADRESSER_URL` | yes | — | Single load-balanced Elasticsearch URL |
-| `ELS_ADRESSER_USERNAME` | no | — | Elasticsearch basic-auth username |
-| `ELS_ADRESSER_PASSWORD` | no | — | Elasticsearch basic-auth password |
-| `ELS_ADRESSER_INDEX` | no | `adressesok` | Elasticsearch index |
-| `ELS_ADRESSER_TIMEOUT_MS` | no | `20000` | Elasticsearch request timeout |
-| `ES_URL` | yes | — | URL for the new Elasticsearch 9 cluster |
-| `ES_API_KEY` | no | — | API key for the new cluster |
-| `ENVIRONMENT` | no | `DEVELOPMENT` | ES9 alias environment: `DEVELOPMENT`, `PRODTEST` or `PROD` |
-| `INTEGRATION_TEST_ID` | no | — | Test suffix for ES9 alias (only with `DEVELOPMENT`) |
-| `ADRESSER_API_LOG_LEVEL` | no | `ERROR` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |
-| `PORT` | no | `3000` | HTTP listen port |
+| `ES_URL` | ja | — | URL til Elasticsearch |
+| `ES_API_KEY` | nei | — | API-nøkkel for clusteret |
+| `ENVIRONMENT` | nei | `DEVELOPMENT` | Miljø for alias: `DEVELOPMENT`, `PRODTEST` eller `PROD` |
+| `INTEGRATION_TEST_ID` | nei | — | Testsuffiks for aliaset (kun med `DEVELOPMENT`) |
+| `ADRESSER_API_LOG_LEVEL` | nei | `info` | `debug`, `info`, `warn` eller `error` |
+| `PORT` | nei | `3000` | HTTP-port |
 
-Copy `.env.example` to `.env.local` or export the variables in your shell. Bun loads `.env.local` automatically.
+Kopier `.env.example` til `.env.local`, eller sett variablene i shellet. Bun leser `.env.local` automatisk.
 
-## Internal comparison endpoints
+## Indeks
 
-`/adresser/v1/internal/sok` and `/adresser/v1/internal/punktsok` mirror `/sok` and `/punktsok`,
-but query the new Elasticsearch 9 cluster (`ES_URL`/`ES_API_KEY`) instead of the legacy cluster
-(`ELS_ADRESSER_URL`). They reuse the same validation, pagination, projection, and JSON response
-shape, so results can be diffed 1:1 against `/sok`/`/punktsok` while migrating. They are internal
-(not part of the public OpenAPI docs) and do not affect today's `/sok`/`/punktsok` flow.
+Indeksen bruker egne feltnavn (`ElasticAddressDocument` i `@matrikkel/shared-schema`),
+og `undernummer` er indeksert og kan brukes som søkeparameter.
 
-The ES9 index uses different field names (`@matrikkel/shared-schema`'s `ElasticAddressDocument`),
-but `undernummer` is indexed and can be used as a search parameter on these endpoints.
-
-## Run locally
+## Kjør lokalt
 
 Kjør kommandoene under fra denne mappen (`apps/adressesok`):
 
@@ -43,17 +31,14 @@ bun install
 bun run dev
 ```
 
-## Tests
+## Tester
 
-Run formatting/lint checks, strict TypeScript compilation, and unit tests:
+Kjør formatering/lint, streng TypeScript-kompilering og enhetstester:
 
 ```bash
-# Run biome, typechecking and unit tests
+# Kjør biome, typesjekk og enhetstester
 bun run check
 
-# Run unit tests
+# Kjør enhetstester
 bun run test
-
-# Run integration tests (requires docker compose for elasticsearch, see "compose:up" and "compose:down" scripts)
-bun run test:integration
 ```
