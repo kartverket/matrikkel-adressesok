@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
-import { convertManagedDocument } from "../../src/managed-document";
+import { convertElasticDocument } from "../../src/elastic-document";
 
 const point = { lat: 59.91, lon: 10.75 };
 
@@ -40,9 +40,9 @@ const document: ElasticAddressDocument = {
   "@timestamp": "2024-05-01T12:34:56.789Z",
 };
 
-describe("convertManagedDocument", () => {
+describe("convertElasticDocument", () => {
   test("mapper nytt skjema til den eldre AddressDocument-formen", () => {
-    expect(convertManagedDocument(document)).toMatchObject({
+    expect(convertElasticDocument(document)).toMatchObject({
       adressenavn: "Storgata",
       adressetekst: "Storgata 1",
       adressekode: 1234,
@@ -60,14 +60,14 @@ describe("convertManagedDocument", () => {
 
   test("sender undernummer videre for matrikkeladresse", () => {
     expect(
-      convertManagedDocument({ ...document, adressetype: "Matrikkeladresse", undernummer: 2 })
+      convertElasticDocument({ ...document, adressetype: "Matrikkeladresse", undernummer: 2 })
         .undernummer,
     ).toBe(2);
   });
 
   test("gjør oppdateringsdato om fra UTC til norsk lokaltid", () => {
     const convert = (oppdateringsdato: string) =>
-      convertManagedDocument({ ...document, oppdateringsdato }).oppdateringsdato;
+      convertElasticDocument({ ...document, oppdateringsdato }).oppdateringsdato;
 
     expect(convert("2024-05-01T12:34:56.789Z")).toBe("2024-05-01T14:34:56");
     expect(convert("2024-01-15T12:34:56.789Z")).toBe("2024-01-15T13:34:56");
@@ -75,26 +75,26 @@ describe("convertManagedDocument", () => {
   });
 
   test("behandler tom/null adressekode som null", () => {
-    expect(convertManagedDocument({ ...document, adressekode: "" }).adressekode).toBeNull();
-    expect(convertManagedDocument({ ...document, adressekode: null }).adressekode).toBeNull();
+    expect(convertElasticDocument({ ...document, adressekode: "" }).adressekode).toBeNull();
+    expect(convertElasticDocument({ ...document, adressekode: null }).adressekode).toBeNull();
   });
 
   test("viser manglende bokstav som tom streng for vegadresse og null for matrikkeladresse", () => {
-    expect(convertManagedDocument({ ...document, bokstav: null }).bokstav).toBe("");
-    expect(convertManagedDocument({ ...document, bokstav: "" }).bokstav).toBe("");
+    expect(convertElasticDocument({ ...document, bokstav: null }).bokstav).toBe("");
+    expect(convertElasticDocument({ ...document, bokstav: "" }).bokstav).toBe("");
     expect(
-      convertManagedDocument({ ...document, adressetype: "Matrikkeladresse", bokstav: null })
+      convertElasticDocument({ ...document, adressetype: "Matrikkeladresse", bokstav: null })
         .bokstav,
     ).toBeNull();
   });
 
   test("viser bruksenhetsnummer bare når det er flere bruksenheter", () => {
     expect(
-      convertManagedDocument({ ...document, bruksenhetsnummer: [] }).bruksenhetsnummer,
+      convertElasticDocument({ ...document, bruksenhetsnummer: [] }).bruksenhetsnummer,
     ).toEqual([]);
-    expect(convertManagedDocument(document).bruksenhetsnummer).toEqual([]);
+    expect(convertElasticDocument(document).bruksenhetsnummer).toEqual([]);
     expect(
-      convertManagedDocument({ ...document, bruksenhetsnummer: ["H0101", "H0201"] })
+      convertElasticDocument({ ...document, bruksenhetsnummer: ["H0101", "H0201"] })
         .bruksenhetsnummer,
     ).toEqual(["H0101", "H0201"]);
   });

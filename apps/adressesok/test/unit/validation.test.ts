@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { GeoPointSchema } from "../../src/routes/point-search";
-import { GeneralSearchSchema } from "../../src/routes/search";
+import { GeneralSearchSchema } from "../../src/routes/search-parameters";
 import { formatValidationErrors } from "../../src/utils/query-validation";
 
 function validate(schema: typeof GeneralSearchSchema | typeof GeoPointSchema, query = ""): unknown {

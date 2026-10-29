@@ -8,16 +8,12 @@
     "start": "bun src/index.ts",
     "check": "biome check . && bun run typecheck && bun test ./test/unit",
     "typecheck": "bun x tsc --noEmit",
-    "test": "bun test ./test/unit",
-    "test:integration": "bun test ./test/integration",
-    "compose:up": "docker compose -f ../../compose.yaml up -d --wait elasticsearch",
-    "compose:down": "docker compose -f ../../compose.yaml rm -fsv elasticsearch"
+    "test": "bun test ./test/unit"
   },
   "dependencies": {
     "@matrikkel/shared-logging": "workspace:*",
     "@matrikkel/shared-schema": "workspace:*",
-    "@elastic/elasticsearch": "7",
-    "@elastic/elasticsearch9": "npm:@elastic/elasticsearch@^9.1",
+    "@elastic/elasticsearch": "^9.1",
     "@elastic/transport": "^9.1",
     "@hono/prometheus": "^1.0.3",
     "@hono/structured-logger": "^1.0.0",

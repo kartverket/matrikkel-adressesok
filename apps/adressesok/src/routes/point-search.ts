@@ -1,15 +1,12 @@
+import type { AddressDocument } from "@matrikkel/shared-schema";
 import type { Hono } from "hono";
 import type { Logger } from "pino";
 import type { Registry } from "prom-client";
 import { z } from "zod";
-import type {
-  AddressDocument,
-  ElasticsearchSearchBody,
-  SearchBackend,
-  SearchHit,
-} from "../elasticsearch";
+import type { ElasticsearchSearchBody } from "../elasticsearch";
 import { jsonResponse } from "../http";
 import { DEFAULT_SRID, reprojectAddresses, reprojectInputToDefault } from "../projection";
+import type { SearchBackend, SearchHit } from "../search-backend";
 import { createHistogram, measureTime } from "../utils/metrics";
 import {
   enforcePaginationLimit,
@@ -88,19 +85,13 @@ export function registerPointSearchRoute(
   searchBackend: SearchBackend,
   logger: Logger,
   prometheus: Registry,
-  options: {
-    path?: string;
-    metricName?: string;
-    metricHelp?: string;
-    logMessage?: string;
-  } = {},
 ): void {
   const timeHistogram = createHistogram({
-    name: options.metricName ?? "punktsok_query_duration_seconds",
-    help: options.metricHelp ?? "Time used to execute punktsok queries",
+    name: "punktsok_query_duration_seconds",
+    help: "Time used to execute punktsok queries",
     registers: [prometheus],
   });
-  app.get(options.path ?? "/punktsok", validateQuery(GeoPointSchema), async (context) => {
+  app.get("/punktsok", validateQuery(GeoPointSchema), async (context) => {
     const parameters = context.req.valid("query");
     const point = reprojectInputToDefault(parameters.lat, parameters.lon, parameters.koordsys);
     const body = geoPointSearchBody(
@@ -110,7 +101,7 @@ export function registerPointSearchRoute(
       parameters.side * parameters.treffPerSide,
       parameters.treffPerSide,
     );
-    logger.debug({ query: body.query }, options.logMessage ?? "Elasticsearch geo query");
+    logger.debug({ query: body.query }, "Elasticsearch geo query");
     const result = await measureTime(timeHistogram, () => searchBackend.search(body));
     const addresses = result.hits.map(addressWithDistance);
     const output: AddressListOutput = {

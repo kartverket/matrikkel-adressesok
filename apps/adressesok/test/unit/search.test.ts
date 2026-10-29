@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test";
 import pino from "pino";
 import { Registry } from "prom-client";
 import { createApp } from "../../src/app";
-import type { ManagedSearchResult } from "../../src/managed-elasticsearch";
+import type { ElasticsearchResult } from "../../src/elasticsearch";
 
 const logger = pino({ enabled: false });
 
-describe("internal managed search routes", () => {
-  test("/sok builds a query against the new ES9 field names and maps the response", async () => {
+describe("search routes", () => {
+  test("/sok builds a query against the index field names and maps the response", async () => {
     let capturedQuery: unknown;
-    const managedElasticsearch = {
+    const elasticsearch = {
       isReady: async () => true,
       search: async (body: { query?: unknown }) => {
         capturedQuery = body.query;
@@ -29,11 +29,11 @@ describe("internal managed search routes", () => {
               },
             },
           ],
-        } as unknown as ManagedSearchResult;
+        } as unknown as ElasticsearchResult;
       },
     };
     const app = createApp({
-      managedElasticsearch,
+      elasticsearch,
       logger,
       registry: new Registry(),
     });
@@ -58,7 +58,7 @@ describe("internal managed search routes", () => {
   });
 
   test("/sok returns atkomstpunkt, reprojected with utkoordsys", async () => {
-    const managedElasticsearch = {
+    const elasticsearch = {
       isReady: async () => true,
       search: async () =>
         ({
@@ -81,10 +81,10 @@ describe("internal managed search routes", () => {
               },
             },
           ],
-        }) as unknown as ManagedSearchResult,
+        }) as unknown as ElasticsearchResult,
     };
     const app = createApp({
-      managedElasticsearch,
+      elasticsearch,
       logger,
       registry: new Registry(),
     });
@@ -115,14 +115,14 @@ describe("internal managed search routes", () => {
 
   test("/sok strips wildcards on keyword fields and matches exactly", async () => {
     let capturedQuery: unknown;
-    const managedElasticsearch = {
+    const elasticsearch = {
       isReady: async () => true,
       search: async (body: { query?: unknown }) => {
         capturedQuery = body.query;
         return { total: 0, hits: [] };
       },
     };
-    const app = createApp({ managedElasticsearch, logger, registry: new Registry() });
+    const app = createApp({ elasticsearch, logger, registry: new Registry() });
 
     const response = await app.request("/adresser/v1/sok?postnummer=0154*");
     expect(response.status).toBe(200);
@@ -131,7 +131,7 @@ describe("internal managed search routes", () => {
 
   test("/sok searches on undernummer", async () => {
     let capturedQuery: unknown;
-    const managedElasticsearch = {
+    const elasticsearch = {
       isReady: async () => true,
       search: async (body: { query?: unknown }) => {
         capturedQuery = body.query;
@@ -139,7 +139,7 @@ describe("internal managed search routes", () => {
       },
     };
     const app = createApp({
-      managedElasticsearch,
+      elasticsearch,
       logger,
       registry: new Registry(),
     });
@@ -151,7 +151,7 @@ describe("internal managed search routes", () => {
 
   test("/sok treats an empty bokstav as addresses without a letter", async () => {
     let capturedQuery: unknown;
-    const managedElasticsearch = {
+    const elasticsearch = {
       isReady: async () => true,
       search: async (body: { query?: unknown }) => {
         capturedQuery = body.query;
@@ -159,7 +159,7 @@ describe("internal managed search routes", () => {
       },
     };
     const app = createApp({
-      managedElasticsearch,
+      elasticsearch,
       logger,
       registry: new Registry(),
     });
@@ -169,10 +169,10 @@ describe("internal managed search routes", () => {
     expect(JSON.stringify(capturedQuery)).toContain('"must_not":{"exists":{"field":"bokstav"}}');
   });
 
-  test("isReady depends on the managed Elasticsearch", async () => {
+  test("isReady depends on Elasticsearch", async () => {
     const create = (ready: boolean) =>
       createApp({
-        managedElasticsearch: {
+        elasticsearch: {
           isReady: async () => ready,
           search: async () => ({ total: 0, hits: [] }),
         },

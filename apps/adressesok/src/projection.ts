@@ -1,6 +1,6 @@
+import type { AddressDocument } from "@matrikkel/shared-schema";
 import epsgIndex from "epsg-index/all.json" with { type: "json" };
 import proj4 from "proj4";
-import type { AddressDocument } from "./elasticsearch";
 import { badRequest, HttpError } from "./http";
 
 export const DEFAULT_SRID = 4258;

@@ -1,61 +1,34 @@
+import type { AddressDocument } from "@matrikkel/shared-schema";
 import pino from "pino";
 import { Registry } from "prom-client";
 import { createApp } from "../../src/app";
-import type {
-  AddressDocument,
-  Elasticsearch,
-  ElasticsearchSearchBody,
-} from "../../src/elasticsearch";
-import type {
-  ManagedElasticsearchSearchBody,
-  ManagedSearchResult,
-} from "../../src/managed-elasticsearch";
+import type { ElasticsearchResult, ElasticsearchSearchBody } from "../../src/elasticsearch";
+import type { SearchBackend } from "../../src/search-backend";
 
-export type SearchImplementation = "legacy" | "managed";
+type SearchStub = SearchBackend & { isReady(): Promise<boolean> };
 
 const logger = pino({ enabled: false });
-const managedElasticsearch = {
-  isReady: async () => true,
-  search: async () => ({ total: 0, hits: [] }),
-};
 
-export function appWith(_elasticsearch: Elasticsearch) {
-  return createApp({ managedElasticsearch, logger, registry: new Registry() });
-}
-
-function appWithImplementation(
-  elasticsearch: Elasticsearch,
-  _implementation: SearchImplementation,
-  appLogger = logger,
-) {
-  const managedSearch = {
-    isReady: elasticsearch.isReady,
-    search: async (body: ManagedElasticsearchSearchBody) => {
-      const result = await elasticsearch.search({
-        query: (body.query ?? { match_all: {} }) as unknown as NonNullable<
-          ElasticsearchSearchBody["query"]
-        >,
-        from: body.from ?? 0,
-        size: body.size ?? 10,
-      });
+/** Lager appen med en stub som svarer med API-dokumenter, oversatt til indeksformatet. */
+export function appWith(stub: SearchStub, appLogger = logger) {
+  const elasticsearch = {
+    isReady: stub.isReady,
+    search: async (body: ElasticsearchSearchBody) => {
+      const result = await stub.search(body);
       return {
         total: result.total,
         hits: result.hits.map((hit) => ({
           ...hit,
-          _source: toManagedDocument(hit._source),
+          _source: toElasticDocument(hit._source),
         })),
-      } as unknown as ManagedSearchResult;
+      } as unknown as ElasticsearchResult;
     },
   };
 
-  return createApp({
-    managedElasticsearch: managedSearch,
-    logger: appLogger,
-    registry: new Registry(),
-  });
+  return createApp({ elasticsearch, logger: appLogger, registry: new Registry() });
 }
 
-function toManagedDocument(address: AddressDocument): Record<string, unknown> {
+function toElasticDocument(address: AddressDocument): Record<string, unknown> {
   return {
     uuid: "test-address",
     adresse_id: "test-address",
@@ -93,21 +66,11 @@ function toManagedDocument(address: AddressDocument): Record<string, unknown> {
   };
 }
 
-export function appWithSearchImplementation(
-  elasticsearch: Elasticsearch,
-  _implementation: SearchImplementation,
-) {
-  return appWithImplementation(elasticsearch, _implementation);
-}
-
 /**
  * Som appWith, men fanger opp alt som logges slik at tester kan verifisere
  * hvilket nivå (info/warn/error) faktiske request/response-logger havner på.
  */
-export function appWithCapturedLogs(
-  elasticsearch: Elasticsearch,
-  implementation: SearchImplementation = "legacy",
-) {
+export function appWithCapturedLogs(stub: SearchStub) {
   const entries: Record<string, unknown>[] = [];
   const capturingLogger = pino(
     {
@@ -117,6 +80,6 @@ export function appWithCapturedLogs(
     },
     { write: (line: string) => entries.push(JSON.parse(line)) },
   );
-  const app = appWithImplementation(elasticsearch, implementation, capturingLogger);
+  const app = appWith(stub, capturingLogger);
   return { app, entries };
 }

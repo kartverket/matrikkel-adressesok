@@ -4,24 +4,23 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Logger } from "pino";
 import type { Registry } from "prom-client";
+import type { ElasticsearchClient } from "./elasticsearch";
 import { HttpError, jsonResponse } from "./http";
 import { createStructuredHonoLogger } from "./logger";
-import type { ManagedElasticsearchClient } from "./managed-elasticsearch";
-import { createManagedSearchBackend } from "./managed-search-backend";
 import openapiSpec from "./openapi.json" with { type: "json" };
-import { constructManagedQuery } from "./routes/internal-search";
 import { registerPointSearchRoute } from "./routes/point-search";
 import { registerSearchRoute } from "./routes/search";
+import { createSearchBackend } from "./search-backend";
 
 export interface AppDependencies {
-  managedElasticsearch: Pick<ManagedElasticsearchClient, "isReady" | "search">;
+  elasticsearch: Pick<ElasticsearchClient, "isReady" | "search">;
   logger: Logger;
   registry: Registry;
 }
 
 const BASE_PATH = "/adresser/v1";
 
-export function createApp({ managedElasticsearch, logger, registry }: AppDependencies): Hono {
+export function createApp({ elasticsearch, logger, registry }: AppDependencies): Hono {
   const app = new Hono().basePath(BASE_PATH);
   const { printMetrics, registerMetrics } = prometheus({
     collectDefaultMetrics: true,
@@ -43,14 +42,9 @@ export function createApp({ managedElasticsearch, logger, registry }: AppDepende
     }),
   );
 
-  const managedSearchBackend = createManagedSearchBackend(managedElasticsearch);
-  registerSearchRoute(app, managedSearchBackend, logger, registry, {
-    queryBuilder: constructManagedQuery,
-    logMessage: "Managed Elasticsearch query",
-  });
-  registerPointSearchRoute(app, managedSearchBackend, logger, registry, {
-    logMessage: "Managed Elasticsearch geo query",
-  });
+  const searchBackend = createSearchBackend(elasticsearch);
+  registerSearchRoute(app, searchBackend, logger, registry);
+  registerPointSearchRoute(app, searchBackend, logger, registry);
 
   app.get("/openapi.json", (c) => c.json(openapiSpec));
   app.get("/docs.json", (c) => c.json(openapiSpec));
@@ -65,7 +59,7 @@ export function createApp({ managedElasticsearch, logger, registry }: AppDepende
 
   app.get("/internal/isAlive", (c) => c.json({ status: "UP" }));
   app.get("/internal/isReady", async (c) => {
-    if (!(await managedElasticsearch.isReady())) return c.json({ status: "DOWN" }, 503);
+    if (!(await elasticsearch.isReady())) return c.json({ status: "DOWN" }, 503);
 
     return c.json({ status: "UP" });
   });

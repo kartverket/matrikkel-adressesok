@@ -1,13 +1,8 @@
 import { ElasticAddressDocumentSchema } from "@matrikkel/shared-schema";
 import type { ElasticsearchQuery } from "../elasticsearch";
 import { badRequest } from "../http";
-import { addressParameters, type GeneralSearchParameters } from "./search";
+import { addressParameters, type GeneralSearchParameters } from "./search-parameters";
 
-/**
- * Query-builderen er bevisst duplisert fra dagens `/sok`: det nye indeks-
- * skjemaet har egne feltaliaser, og endringer her skal ikke endre legacy-
- * søkeflyten.
- */
 type AddressParameterName = keyof typeof addressParameters;
 const addressParameterNames = Object.keys(addressParameters) as AddressParameterName[];
 const textFields = new Set([
@@ -18,7 +13,7 @@ const textFields = new Set([
   "adressenavn",
   "postnummer",
 ]);
-// Keyword-felt i ES9-indeksen: match_phrase_prefix støttes bare på text-felt, så * fjernes og vi søker eksakt
+// Keyword-felt i indeksen: match_phrase_prefix støttes bare på text-felt, så * fjernes og vi søker eksakt
 const keywordFields = new Set(["kommunenummer", "postnummer"]);
 const exactPhraseFields = new Set(["adressetekst", "adressenavn"]);
 // Uten eksplisitte felt søker simple_query_string i alle felt, og wildcard
@@ -99,7 +94,7 @@ function applyFuzziness(term: string, fuzzy: boolean): string {
   return `${term}~`;
 }
 
-function createManagedAddressQueries(parameters: GeneralSearchParameters): ElasticsearchQuery[] {
+function createAddressQueries(parameters: GeneralSearchParameters): ElasticsearchQuery[] {
   const queries: ElasticsearchQuery[] = [];
   for (const key of addressParameterNames) {
     const value = parameters[key];
@@ -109,7 +104,7 @@ function createManagedAddressQueries(parameters: GeneralSearchParameters): Elast
   return queries;
 }
 
-function createManagedGeneralSearchQuery(
+function createGeneralSearchQuery(
   parameters: GeneralSearchParameters,
 ): ElasticsearchQuery | undefined {
   const operator = parameters.sokemodus ?? "AND";
@@ -135,9 +130,9 @@ function createManagedGeneralSearchQuery(
   };
 }
 
-export function constructManagedQuery(parameters: GeneralSearchParameters): ElasticsearchQuery {
-  const queries = createManagedAddressQueries(parameters);
-  const generalSearchQuery = createManagedGeneralSearchQuery(parameters);
+export function constructQuery(parameters: GeneralSearchParameters): ElasticsearchQuery {
+  const queries = createAddressQueries(parameters);
+  const generalSearchQuery = createGeneralSearchQuery(parameters);
   if (generalSearchQuery) queries.unshift(generalSearchQuery);
 
   const [firstQuery, ...additionalQueries] = queries;
