@@ -201,7 +201,8 @@ export const MAPPING: Pick<estypes.IndicesCreateRequest, "settings" | "mappings"
       poststed: norskTekst,
       postnummer: { type: "keyword" },
       kommunenummer: { type: "keyword" },
-      adressekode: { type: "keyword" },
+      // Lagres som tall slik at søk på 7660 også treffer kilde-verdien "07660"
+      adressekode: { type: "integer" },
       bokstav: { type: "keyword" },
       bruksenhetsnummer: { type: "keyword" },
       seksjonsnummer: { type: "integer" },
