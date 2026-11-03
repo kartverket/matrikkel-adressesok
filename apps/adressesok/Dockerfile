@@ -24,4 +24,4 @@ WORKDIR /app/apps/adressesok
 ENV PORT=3000
 EXPOSE 3000
 USER bun
-CMD ["bun", "run", "start"]
+ENTRYPOINT ["bun", "src/index.ts"]
