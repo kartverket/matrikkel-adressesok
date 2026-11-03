@@ -44,6 +44,12 @@ describe("query validation", () => {
     });
   });
 
+  test("rejects non-positive radius", () => {
+    expect(validate(GeoPointSchema, "lat=60&lon=11&radius=0")).toEqual({
+      message: { radius: ["Radius må være større enn 0."] },
+    });
+  });
+
   test("accepts Marshmallow boolean spellings", () => {
     expect(validate(GeneralSearchSchema, "sok=x&fuzzy=True")).toMatchObject({
       fuzzy: true,

@@ -19,6 +19,10 @@ spec:
     requests:
       cpu: 100m
       memory: 512M # Istio-proxy bruker 200Mb
+  accessPolicy:
+    outbound:
+      external:
+        - host: matrikkelen-adrs-dev-cf782b.es.europe-north1.gcp.elastic-cloud.com
 
   liveness:
     failureThreshold: 3
@@ -86,7 +90,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              'kubernetes.io/metadata.name': 'istio-gateways'
+              "kubernetes.io/metadata.name": "istio-gateways"
           podSelector:
             matchLabels:
               istio: ingressgateway

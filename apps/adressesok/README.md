@@ -6,14 +6,14 @@
 
 ## Konfigurasjon
 
-| Variabel | Påkrevd | Standard | Formål |
-| --- | --- | --- | --- |
-| `ES_URL` | ja | — | URL til Elasticsearch |
-| `ES_API_KEY` | nei | — | API-nøkkel for clusteret |
-| `ENVIRONMENT` | nei | `DEVELOPMENT` | Miljø for alias: `DEVELOPMENT`, `PRODTEST` eller `PROD` |
-| `INTEGRATION_TEST_ID` | nei | — | Testsuffiks for aliaset (kun med `DEVELOPMENT`) |
-| `ADRESSER_API_LOG_LEVEL` | nei | `info` | `debug`, `info`, `warn` eller `error` |
-| `PORT` | nei | `3000` | HTTP-port |
+| Variabel                 | Påkrevd | Standard      | Formål                                                  |
+| ------------------------ | ------- | ------------- | ------------------------------------------------------- |
+| `ES_URL`                 | ja      | —             | URL til Elasticsearch                                   |
+| `ES_API_KEY`             | nei     | —             | API-nøkkel for clusteret                                |
+| `ENVIRONMENT`            | nei     | `DEVELOPMENT` | Miljø for alias: `DEVELOPMENT`, `PRODTEST` eller `PROD` |
+| `INTEGRATION_TEST_ID`    | nei     | —             | Testsuffiks for aliaset (kun med `DEVELOPMENT`)         |
+| `ADRESSER_API_LOG_LEVEL` | nei     | `info`        | `debug`, `info`, `warn` eller `error`                   |
+| `PORT`                   | nei     | `3000`        | HTTP-port                                               |
 
 Kopier `.env.example` til `.env.local`, eller sett variablene i shellet. Bun leser `.env.local` automatisk.
 
