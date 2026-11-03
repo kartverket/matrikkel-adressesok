@@ -28,5 +28,5 @@ WORKDIR /app/apps/databricks-til-elastic
 # Satt for forutsigbare, UTC-baserte tidsstempler i logger og indeksnavn,
 # uavhengig av hvilken sone runtime-miljøet ellers er i.
 ENV TZ=UTC
-USER bun
+USER 65532:65532
 ENTRYPOINT ["bun", "run", "src/index.ts"]

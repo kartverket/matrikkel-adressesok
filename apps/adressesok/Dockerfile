@@ -23,5 +23,5 @@ COPY apps/adressesok/src ./apps/adressesok/src
 WORKDIR /app/apps/adressesok
 ENV PORT=3000
 EXPOSE 3000
-USER bun
-CMD ["bun", "run", "start"]
+USER 65532:65532
+ENTRYPOINT ["bun", "src/index.ts"]
