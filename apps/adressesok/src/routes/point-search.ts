@@ -30,7 +30,7 @@ export const GeoPointSchema = z
   .strictObject({
     lat: numberQuery,
     lon: numberQuery,
-    radius: integerQuery,
+    radius: integerQuery.refine((value) => value > 0, "Radius må være større enn 0."),
     koordsys: integerQuery.optional().default(DEFAULT_SRID),
     ...standardParameters,
   })
