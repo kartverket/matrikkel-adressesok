@@ -4,6 +4,13 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 
 version: 2
+registries:
+  dhi:
+    type: docker-registry
+    url: https://dhi.io
+    # Dependabot kan ikke lese vars, så brukernavnet må også ligge som Dependabot-secret
+    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
 updates:
   - package-ecosystem: "bun"
     directory: "/"
@@ -25,5 +32,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/"
+    registries:
+      - dhi
     schedule:
       interval: "daily"
