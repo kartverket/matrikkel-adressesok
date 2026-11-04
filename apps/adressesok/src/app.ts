@@ -13,7 +13,7 @@ import { registerSearchRoute } from "./routes/search";
 import { createSearchBackend } from "./search-backend";
 
 export interface AppDependencies {
-  elasticsearch: Pick<ElasticsearchClient, "isReady" | "search">;
+  elasticsearch: ElasticsearchClient;
   logger: Logger;
   registry: Registry;
 }

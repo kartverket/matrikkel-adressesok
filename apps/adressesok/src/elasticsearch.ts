@@ -8,10 +8,7 @@ import type { AppConfig } from "./config";
  * Klientgrensesnittet flater ut `query`/`from`/`size`/`sort`/`_source`
  * på toppnivå (ikke pakket inn i `body`), så søkebodyen speiler det.
  */
-export type ElasticsearchSearchBody = Pick<
-  estypes.SearchRequest,
-  "query" | "from" | "size" | "sort" | "_source"
->;
+export type ElasticsearchSearchBody = estypes.SearchRequest;
 
 export type ElasticsearchQuery = NonNullable<ElasticsearchSearchBody["query"]>;
 
