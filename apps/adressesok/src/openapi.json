@@ -379,6 +379,32 @@
         "lon"
       ]
     },
+    "AtkomstPunkter": {
+      "type": "object",
+      "description": "Atkomstpunkter for adressen. Hvert punkt er null hvis det ikke finnes.",
+      "properties": {
+        "oy": {
+          "$ref": "#/definitions/GeomPoint",
+          "description": "Atkomstpunkt til \u00f8y"
+        },
+        "nodetat": {
+          "$ref": "#/definitions/GeomPoint",
+          "description": "Atkomstpunkt for n\u00f8detater"
+        },
+        "sommer": {
+          "$ref": "#/definitions/GeomPoint",
+          "description": "Atkomstpunkt om sommeren"
+        },
+        "vinter": {
+          "$ref": "#/definitions/GeomPoint",
+          "description": "Atkomstpunkt om vinteren"
+        },
+        "generell": {
+          "$ref": "#/definitions/GeomPoint",
+          "description": "Generelt atkomstpunkt"
+        }
+      }
+    },
     "OutputAdresse": {
       "type": "object",
       "properties": {
@@ -473,6 +499,13 @@
           "type": "string",
           "format": "date-time",
           "description": "Dato for siste endring p\u00e5 objektdataene"
+        },
+        "adresseid": {
+          "type": "string",
+          "description": "Unik identifikator for adressen i matrikkelen"
+        },
+        "atkomstpunkt": {
+          "$ref": "#/definitions/AtkomstPunkter"
         }
       }
     },
@@ -584,6 +617,13 @@
           "type": "string",
           "format": "date-time",
           "description": "Dato for siste endring p\u00e5 objektdataene"
+        },
+        "adresseid": {
+          "type": "string",
+          "description": "Unik identifikator for adressen i matrikkelen"
+        },
+        "atkomstpunkt": {
+          "$ref": "#/definitions/AtkomstPunkter"
         },
         "meterDistanseTilPunkt": {
           "type": "number",
