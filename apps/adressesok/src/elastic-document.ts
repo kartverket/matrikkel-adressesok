@@ -1,12 +1,11 @@
-import type { ElasticAddressDocument } from "@matrikkel/shared-schema";
-import type { AddressDocument } from "./elasticsearch";
+import type { AddressDocument, ElasticAddressDocument } from "@matrikkel/shared-schema";
 
 /**
- * Oversetter et dokument fra den nye ES9-klyngen (`ElasticAddressDocument`,
+ * Oversetter et dokument fra Elasticsearch (`ElasticAddressDocument`,
  * der feltnavn følger Databricks-kontrakten) til API-ets `AddressDocument`-
  * form, som serialiseres av `utils/response.ts`.
  */
-export function convertManagedDocument(document: ElasticAddressDocument): AddressDocument {
+export function convertElasticDocument(document: ElasticAddressDocument): AddressDocument {
   const adressekode =
     document.adressekode === null || document.adressekode === ""
       ? null
@@ -35,7 +34,6 @@ export function convertManagedDocument(document: ElasticAddressDocument): Addres
     stedfestingverifisert: document.representasjonspunkt_stedfesting_verifisert,
     representasjonspunkt: document.representasjonspunkt,
     oppdateringsdato: tilNorskTid(document.oppdateringsdato),
-
     atkomstpunkt: document.atkomstpunkt,
   };
 }

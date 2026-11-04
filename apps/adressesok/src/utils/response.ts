@@ -1,5 +1,5 @@
+import type { AddressDocument } from "@matrikkel/shared-schema";
 import { z } from "zod";
-import type { AddressDocument } from "../elasticsearch";
 import { badRequest } from "../http";
 import { DEFAULT_SRID } from "../projection";
 
