@@ -1,6 +1,6 @@
 # Bun >= 1.2 kreves: eldre versjoner klarer ikke å importere @elastic/transport.
 # Digest pinnet for reproduserbare bygg, samme praksis som rot-Dockerfile.
-FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a
+FROM dhi.io/bun:1.4.4-alpine3.24-dev@sha256:2699d4021abe1deee50092d5dc3043f93779d6d1a7ef2dadff8a8a6fa1324b76 AS production-dependencies
 WORKDIR /app
 
 # Build-konteksten er repo-roten (ikke apps/databricks-til-elastic/) fordi workspace-
@@ -15,11 +15,18 @@ COPY apps/databricks-til-elastic/package.json ./apps/databricks-til-elastic/pack
 COPY apps/adressesok/package.json ./apps/adressesok/package.json
 RUN bun install --frozen-lockfile --production --filter databricks-til-elastic
 
+FROM dhi.io/bun:1.4.4-alpine3.24@sha256:109847d243a134c7fefc3f3d39d26c2b2080117b36149bb3b307de7ff81e9217 AS runtime
+WORKDIR /app
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=production-dependencies /app/apps/databricks-til-elastic/node_modules ./apps/databricks-til-elastic/node_modules
+COPY --from=production-dependencies /app/packages ./packages
+COPY package.json bun.lock ./
+COPY apps/databricks-til-elastic/package.json ./apps/databricks-til-elastic/package.json
 COPY apps/databricks-til-elastic/src ./apps/databricks-til-elastic/src
 WORKDIR /app/apps/databricks-til-elastic
 
 # Satt for forutsigbare, UTC-baserte tidsstempler i logger og indeksnavn,
 # uavhengig av hvilken sone runtime-miljøet ellers er i.
 ENV TZ=UTC
-USER bun
+USER 65532:65532
 ENTRYPOINT ["bun", "run", "src/index.ts"]
