@@ -34,7 +34,7 @@
     "apps/databricks-til-elastic": {
       "name": "databricks-til-elastic",
       "dependencies": {
-        "@databricks/sql": "^2.4.0",
+        "@databricks/sql": "^3.0.0",
         "@elastic/elasticsearch": "^9.1",
         "@elastic/transport": "^9.1",
         "@matrikkel/shared-logging": "workspace:*",
@@ -124,23 +124,23 @@
 
     "@dabh/diagnostics": ["@dabh/diagnostics@2.0.9", "", { "dependencies": { "@so-ric/colorspace": "^1.1.6", "enabled": "2.0.x", "kuler": "^2.0.0" } }, "sha512-R6siwR65Hm+3yfgP7o8DKhNvputQAwfoz9zTc3kyDudnomj2/BcLmD+uGQQPICjuFUp8ounPBU+jmKsocwVVAg=="],
 
-    "@databricks/databricks-sql-kernel-darwin-arm64": ["@databricks/databricks-sql-kernel-darwin-arm64@1.3.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-0oXTBrjakFnUZ/ohBrLZdZWojwV125RbzuIDibcfNXnZOzA+EnhtLsgveNnkJoABQzAaHqvXcuLiuX67E7Ivag=="],
+    "@databricks/databricks-sql-kernel-darwin-arm64": ["@databricks/databricks-sql-kernel-darwin-arm64@1.4.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-AV5oK6jUDw01FLZHmBy18udZtB5B0aW0JrCmi1x+XshumXTEa+sI18Z4CP7dSS1I3+aNvZVEJNhaxPzRkYEhqQ=="],
 
-    "@databricks/databricks-sql-kernel-darwin-x64": ["@databricks/databricks-sql-kernel-darwin-x64@1.3.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-QDxiMluC4WS/L7EI8TlkP8GT0Nj/q+YmFFt7D/8aaN53LuGkZoyvjeS2z+dB2YxkStHsqXky4nt1babKvrQh7A=="],
+    "@databricks/databricks-sql-kernel-darwin-x64": ["@databricks/databricks-sql-kernel-darwin-x64@1.4.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-mwVSC/mn12X7sefK42lsvbCmsCVh0t5se6RciBe7y17440wAgzseEu/H2BahSAl97KrDmQodec3nnJfmAaP6XA=="],
 
-    "@databricks/databricks-sql-kernel-linux-arm64-gnu": ["@databricks/databricks-sql-kernel-linux-arm64-gnu@1.3.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-JA7fRhcIdyoIGbDOAz3f6zRVJL9cIY2L3SdhyIn2LhbxNfbgLKqR6bXlyir67EgrrqP8ynWaFdzXJ6y9BJQXVw=="],
+    "@databricks/databricks-sql-kernel-linux-arm64-gnu": ["@databricks/databricks-sql-kernel-linux-arm64-gnu@1.4.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-vYry295QIALSO/U6znBJOQj38H0I5lpSdWcP2yAcXXNG83Eewaux4OgaqJHLgeknOsomNH5Q6nsXBOz0GOCV2g=="],
 
-    "@databricks/databricks-sql-kernel-linux-arm64-musl": ["@databricks/databricks-sql-kernel-linux-arm64-musl@1.3.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-OUkAIwm5MEjniOZasAhFXl9qNi6yzN4Uboam5c26gz9SenLjVooJH0KgL6rEpWOW27a6WsAOxKDBX2Nz8/9Z2w=="],
+    "@databricks/databricks-sql-kernel-linux-arm64-musl": ["@databricks/databricks-sql-kernel-linux-arm64-musl@1.4.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-tpfCDBTw+dfYsNA83TV6BXDLPoq/a+7e7Ond3gp1HqfnCNRnr9+Mgf5S8ddTtZj01ieh07EXlEntGq3UGR2rCw=="],
 
-    "@databricks/databricks-sql-kernel-linux-x64-gnu": ["@databricks/databricks-sql-kernel-linux-x64-gnu@1.3.0", "", { "os": "linux", "cpu": "x64" }, "sha512-fE8kh7axe7DiRn5bilVlq2YmY98pYicjGTD2ZBTYDyoR5kO9mpDHg4smeVTf40k5hS1AthRkZEgThKRNZD75yQ=="],
+    "@databricks/databricks-sql-kernel-linux-x64-gnu": ["@databricks/databricks-sql-kernel-linux-x64-gnu@1.4.0", "", { "os": "linux", "cpu": "x64" }, "sha512-60tLq4aIV/Ota0fqZiOP1uNQOoS5IGi/fDtbzs7YUlM4w9Ttrv8DRKKlAag+sPcqa24DB+2XA8SQqe6KJaXYew=="],
 
-    "@databricks/databricks-sql-kernel-linux-x64-musl": ["@databricks/databricks-sql-kernel-linux-x64-musl@1.3.0", "", { "os": "linux", "cpu": "x64" }, "sha512-y3W6t9Biy+eYLn8O0EYWrBgnZ33SufcMbfO7s1qoOf8vClXLVBYdnSZBhKS8qUX2CYzmQQWxuXVOz3VPrLCzzw=="],
+    "@databricks/databricks-sql-kernel-linux-x64-musl": ["@databricks/databricks-sql-kernel-linux-x64-musl@1.4.0", "", { "os": "linux", "cpu": "x64" }, "sha512-AwoFIIOeIhQFRAVMHczBAJkzBzmHIwL5kzo5/n2+A3pl1MF1SDxBKcWJHFM3/jcbdC62Xzlca1r8Xp+8S2tKFw=="],
 
-    "@databricks/databricks-sql-kernel-win32-arm64-msvc": ["@databricks/databricks-sql-kernel-win32-arm64-msvc@1.3.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-eeTZcNHMdWEtFKAzydWIt4bilN3ZNf3k7hDI5Y7i3wPLzMlEfSm2tGvtLUgFLslIaEb09YneFmCi2OiefSItSw=="],
+    "@databricks/databricks-sql-kernel-win32-arm64-msvc": ["@databricks/databricks-sql-kernel-win32-arm64-msvc@1.4.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-qubbX9u/HrXyde3iO8fFsQ3lJ2JLQUshvA2Ac3TpaC3Tx0TNiE2gVTwxD8NzT5JOSAWnxLD+ph6tY+QAb0Kbjg=="],
 
-    "@databricks/databricks-sql-kernel-win32-x64-msvc": ["@databricks/databricks-sql-kernel-win32-x64-msvc@1.3.0", "", { "os": "win32", "cpu": "x64" }, "sha512-XZ4mfcUrwb8WbON3tCItqXDxlrk3yJmBUE5QJFAKGd/Zuc9eIo4NixT4+0PhnUQWDYnUSf2Ec1E997rYs/7/MQ=="],
+    "@databricks/databricks-sql-kernel-win32-x64-msvc": ["@databricks/databricks-sql-kernel-win32-x64-msvc@1.4.0", "", { "os": "win32", "cpu": "x64" }, "sha512-Z/n28mvtf8OU/WyzNk0IykO7ertSeJVaPkyd+M+EI049TAB5p7/W8bZp/BMzfXEEaDy5t1O9/KX45VSm0DiglA=="],
 
-    "@databricks/sql": ["@databricks/sql@2.4.0", "", { "dependencies": { "apache-arrow": "^13.0.0", "commander": "^9.3.0", "flatbuffers": "23.5.26", "node-fetch": "^2.6.12", "node-int64": "^0.4.0", "open": "^8.4.2", "openid-client": "^5.4.2", "proxy-agent": "^6.3.1", "thrift": "^0.23.0", "uuid": "^11.1.1", "winston": "^3.8.2" }, "optionalDependencies": { "@databricks/databricks-sql-kernel-darwin-arm64": "1.3.0", "@databricks/databricks-sql-kernel-darwin-x64": "1.3.0", "@databricks/databricks-sql-kernel-linux-arm64-gnu": "1.3.0", "@databricks/databricks-sql-kernel-linux-arm64-musl": "1.3.0", "@databricks/databricks-sql-kernel-linux-x64-gnu": "1.3.0", "@databricks/databricks-sql-kernel-linux-x64-musl": "1.3.0", "@databricks/databricks-sql-kernel-win32-arm64-msvc": "1.3.0", "@databricks/databricks-sql-kernel-win32-x64-msvc": "1.3.0", "lz4-napi": "^2.9.0" } }, "sha512-agzrBxcu/2IpRb8gmOlG3qmbvtDGIpuTbfRd8DDc8PaI8NhFrzcC04lzMpsKvvejQIJiN4LFSk95Jp/phjeK5A=="],
+    "@databricks/sql": ["@databricks/sql@3.0.0", "", { "dependencies": { "apache-arrow": "^13.0.0", "commander": "^9.3.0", "flatbuffers": "23.5.26", "node-fetch": "^2.6.12", "node-int64": "^0.4.0", "open": "^8.4.2", "openid-client": "^5.4.2", "proxy-agent": "^6.3.1", "thrift": "^0.23.0", "uuid": "^11.1.1", "winston": "^3.8.2" }, "optionalDependencies": { "@databricks/databricks-sql-kernel-darwin-arm64": "1.4.0", "@databricks/databricks-sql-kernel-darwin-x64": "1.4.0", "@databricks/databricks-sql-kernel-linux-arm64-gnu": "1.4.0", "@databricks/databricks-sql-kernel-linux-arm64-musl": "1.4.0", "@databricks/databricks-sql-kernel-linux-x64-gnu": "1.4.0", "@databricks/databricks-sql-kernel-linux-x64-musl": "1.4.0", "@databricks/databricks-sql-kernel-win32-arm64-msvc": "1.4.0", "@databricks/databricks-sql-kernel-win32-x64-msvc": "1.4.0", "lz4-napi": "^2.9.0" } }, "sha512-1FHQYrIjjxPnfpcUpzdtQe5RO2YmfVYOLeFUgWWY8treXUao5qA9LSpKB32NLAUR94UhKG/6t5il8hpYFcWYwQ=="],
 
     "@elastic/elasticsearch": ["@elastic/elasticsearch@9.5.1", "", { "dependencies": { "@elastic/transport": "^9.4.0", "tslib": "^2.4.0" }, "peerDependencies": { "apache-arrow": "18.x - 21.x" }, "optionalPeers": ["apache-arrow"] }, "sha512-2ZZqCmgGPjSYn+OphFRYm9g46KVINA0i8fRmlPHJC60RvJeFB6NSHO0nKKOOYhm3WRXyGkLu1xkdXe724fnmnA=="],
 
