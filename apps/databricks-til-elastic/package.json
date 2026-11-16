@@ -19,7 +19,7 @@
   "dependencies": {
     "@matrikkel/shared-logging": "workspace:*",
     "@matrikkel/shared-schema": "workspace:*",
-    "@databricks/sql": "^2.4.0",
+    "@databricks/sql": "^3.0.0",
     "@elastic/elasticsearch": "^9.1",
     "@elastic/transport": "^9.1",
     "pino": "^10.3.1",
