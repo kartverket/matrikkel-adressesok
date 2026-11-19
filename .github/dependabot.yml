@@ -16,6 +16,9 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      exclude: # ikke cooldown for interne pakker
+        - "@matrikkel/*"
     ignore:
       - dependency-name: "*@elastic/elasticsearch"
         update-types: [ "version-update:semver-major" ]
@@ -29,6 +32,9 @@ updates:
     directory: '.github/workflows'
     schedule:
       interval: 'daily'
+    cooldown:
+      exclude: # ikke cooldown for interne pakker
+        - "kartverket/*"
 
   - package-ecosystem: "docker"
     directory: "/"
